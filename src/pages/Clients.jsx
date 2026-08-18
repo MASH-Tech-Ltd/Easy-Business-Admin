@@ -303,11 +303,11 @@ export default function Clients() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Store Name</label>
-                  <input required type="text" className="input-field" value={formData.tenantName} onChange={(e) => setFormData({...formData, tenantName: e.target.value})} placeholder="Mikes Electronics" />
+                  <input required type="text" className="input-field" value={formData.tenantName} onChange={(e) => setFormData({...formData, tenantName: e.target.value})} placeholder="Mikes MashEasy" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Subdomain <span className="text-slate-400 font-normal">(Optional)</span></label>
-                  <input type="text" className="input-field" value={formData.subdomain} onChange={(e) => setFormData({...formData, subdomain: e.target.value})} placeholder="mikes-electronics" />
+                  <input type="text" className="input-field" value={formData.subdomain} onChange={(e) => setFormData({...formData, subdomain: e.target.value})} placeholder="mikes-masheasy" />
                 </div>
               </div>
               <div>

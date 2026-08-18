@@ -95,8 +95,8 @@ export default function Sidebar() {
     <aside className="w-[260px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden">
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm flex-shrink-0">
-            <Shield className="w-5 h-5" />
+          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg overflow-hidden">
+            <img src="/MEasy.png" alt="MashEasy" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-tight">

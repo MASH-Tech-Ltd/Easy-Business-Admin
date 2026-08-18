@@ -38,10 +38,8 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         <div className="dark-glass rounded-3xl p-8 shadow-2xl border border-slate-700/50">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center mb-4 transform -rotate-6 group-hover:rotate-0 transition-transform">
-              <ShieldAlert className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-white text-center">SuperAdmin Access</h2>
+            <img src="/MEasy.png" alt="MashEasy SuperAdmin" className="w-24 h-24 object-contain mb-2" />
+            <h2 className="text-3xl font-bold text-white text-center">MashEasy SuperAdmin</h2>
             <p className="text-slate-400 mt-2 text-center text-sm">Secure platform management</p>
           </div>
 
