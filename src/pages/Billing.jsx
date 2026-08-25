@@ -1,4 +1,4 @@
-import { CreditCard, DollarSign, Clock, Check, X, ExternalLink, Calendar, Trash2 } from 'lucide-react';
+import { CreditCard, DollarSign, Clock, Check, X, ExternalLink, Calendar, Trash2, ChevronLeft, ChevronRight, Search, Filter, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
@@ -8,25 +8,40 @@ export default function Billing() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [meta, setMeta] = useState({ page: 1, limit: 10, totalPages: 1, total: 0 });
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortOrder, setSortOrder] = useState('newest');
 
   // Modal state
   const [editingSub, setEditingSub] = useState(null);
   const [editForm, setEditForm] = useState({ startDate: '', endDate: '', status: '' });
 
   useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 2000);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchInput]);
+
+  useEffect(() => {
     fetchData();
-  }, []);
+  }, [page, search, filterStatus, sortOrder]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [billingRes, subsRes] = await Promise.all([
         api.get('/billing/overview').catch(() => ({ data: { data: null } })),
-        api.get('/subscriptions/get-all-subscriptions').catch(() => ({ data: { data: [] } }))
+        api.get(`/subscriptions/get-all-subscriptions?page=${page}&limit=${meta.limit}&search=${search}&status=${filterStatus}&sortBy=${sortOrder}`).catch(() => ({ data: { data: [] } }))
       ]);
       
       setBillingData(billingRes.data?.data || null);
       setSubscriptions(subsRes.data?.data || []);
+      if (subsRes.data?.meta) setMeta(subsRes.data.meta);
     } catch (error) {
       console.error('Failed to fetch data');
       toast.error('Failed to load subscription data');
@@ -101,40 +116,88 @@ export default function Billing() {
   const activeCount = subscriptions.filter(s => s.status === 'active').length;
 
   return (
-    <div className="space-y-8 w-full max-w-7xl mx-auto pb-10">
+    <div className="space-y-8 w-full pb-10">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Billing & Subscriptions</h2>
         <p className="text-slate-500 text-sm mt-1">Manage tenant subscriptions, approve requests, and monitor revenue.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex justify-between mb-4">
-            <h3 className="font-semibold text-slate-600">Monthly Recurring Revenue</h3>
-            <DollarSign className="w-5 h-5 text-green-500" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold text-slate-600">Total Merchants</h3>
+            <CreditCard className="w-5 h-5 text-indigo-500" />
           </div>
-          <p className="text-4xl font-bold text-slate-800">${billingData?.mrr || '45,200'}</p>
+          <p className="text-4xl font-bold text-slate-800">{billingData?.totalMerchants || '0'}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex justify-between mb-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
             <h3 className="font-semibold text-slate-600">Active Subscriptions</h3>
-            <CreditCard className="w-5 h-5 text-blue-500" />
+            <Check className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-4xl font-bold text-slate-800">{activeCount || billingData?.activeSubscriptions || '0'}</p>
+          <p className="text-4xl font-bold text-slate-800">{billingData?.activeSubscriptions || '0'}</p>
         </div>
-        <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm relative overflow-hidden">
+        <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10"><Clock className="w-24 h-24 text-amber-500" /></div>
-          <div className="flex justify-between mb-4 relative z-10">
+          <div className="flex justify-between mb-2 relative z-10">
             <h3 className="font-semibold text-slate-600">Pending Requests</h3>
             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-2"></div>
           </div>
-          <p className="text-4xl font-bold text-slate-800 relative z-10">{pendingCount}</p>
+          <p className="text-4xl font-bold text-slate-800 relative z-10">{billingData?.pendingInvoices || '0'}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold text-slate-600">Revenue (Total)</h3>
+            <DollarSign className="w-5 h-5 text-green-500" />
+          </div>
+          <p className="text-3xl font-bold text-slate-800">${billingData?.totalRevenue?.toLocaleString() || '0'}</p>
+          <div className="text-[11px] font-medium text-slate-500 mt-2 flex justify-between items-center">
+            <p>Month: <span className="text-green-600">${billingData?.thisMonthRevenue?.toLocaleString() || '0'}</span></p>
+            <p>MRR: <span className="text-blue-600">${billingData?.mrr?.toLocaleString() || '0'}</span></p>
+          </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 className="font-bold text-slate-800 text-lg">Subscription Management</h3>
+        <div className="px-6 py-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between bg-slate-50 gap-4">
+          <h3 className="font-bold text-slate-800 text-lg whitespace-nowrap">Subscription Management</h3>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="relative flex-grow max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Search store name or domain..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
+              <select 
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+            
+            <select 
+              value={sortOrder}
+              onChange={(e) => { setSortOrder(e.target.value); setPage(1); }}
+              className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="default">Default Sort</option>
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
@@ -171,11 +234,15 @@ export default function Billing() {
                       <div className="text-xs text-slate-400 mt-0.5">{sub.tenantId?.contactEmail || sub.tenantId?.ownerId?.email || sub.tenantId?.contactPhone || 'No contact info'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-blue-600">{sub.packageId?.name || 'Unknown Package'}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">${sub.packageId?.price} / {sub.packageId?.billingCycle}</div>
+                      <div className="font-semibold text-blue-600">
+                        {sub.isTrial ? 'Free Trial' : sub.packageId?.name || 'Unknown Package'}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {sub.isTrial ? 'Free / Trial period' : `$${sub.packageId?.price || 0} / ${sub.packageId?.billingCycle || 'N/A'}`}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border
+                      <span className={`inline-flex items-center justify-center gap-1.5 w-24 py-1 rounded-full text-xs font-bold border
                         ${sub.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : 
                           sub.status === 'active' ? 'bg-green-50 text-green-600 border-green-200' : 
                           'bg-slate-100 text-slate-500 border-slate-200'}`}
@@ -183,6 +250,7 @@ export default function Billing() {
                         {sub.status === 'pending' && <Clock className="w-3 h-3" />}
                         {sub.status === 'active' && <Check className="w-3 h-3" />}
                         {sub.status === 'cancelled' && <X className="w-3 h-3" />}
+                        {sub.status === 'expired' && <AlertCircle className="w-3 h-3" />}
                         {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
                       </span>
                     </td>
@@ -227,6 +295,32 @@ export default function Billing() {
             </tbody>
           </table>
         </div>
+        {meta.total > 0 && (
+          <div className="px-6 py-4 bg-white/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-slate-500">
+              Showing <span className="font-medium">{subscriptions.length > 0 ? (meta.page - 1) * meta.limit + 1 : 0}</span> to <span className="font-medium">{Math.min(meta.page * meta.limit, meta.total)}</span> of <span className="font-medium">{meta.total}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={meta.page === 1}
+                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="text-sm font-medium text-slate-700 px-4">
+                Page {meta.page} of {meta.totalPages}
+              </div>
+              <button 
+                onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+                disabled={meta.page >= meta.totalPages}
+                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {editingSub && (

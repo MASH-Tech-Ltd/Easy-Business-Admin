@@ -79,7 +79,7 @@ export default function Clients() {
     try {
       setMetricsLoading(true);
       const res = await api.get(`/tenants/${clientId}/metrics`);
-      if (res.data?.success) {
+      if (res.data?.status === 'ok' || res.data?.success) {
         setActiveMetrics(res.data.data);
       }
     } catch (error) {
@@ -203,9 +203,17 @@ export default function Clients() {
               <tr key={client._id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                      {client.name.charAt(0)}
-                    </div>
+                    {client.ownerId?.avatar?.secure_url ? (
+                      <img 
+                        src={client.ownerId.avatar.secure_url} 
+                        alt={client.name} 
+                        className="w-10 h-10 rounded-lg object-cover shadow-sm border border-slate-200"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                        {client.name.charAt(0)}
+                      </div>
+                    )}
                     <div>
                       <p className="font-semibold text-slate-800">{client.name}</p>
                       <p className="text-xs text-slate-500">ID: {client._id.slice(-6)}</p>
@@ -400,9 +408,17 @@ export default function Clients() {
                   {activeClient?.ownerId ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4 mb-2">
-                        <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm border border-purple-200/50">
-                          {activeClient.ownerId.name?.charAt(0) || '?'}
-                        </div>
+                        {activeClient.ownerId.avatar?.secure_url ? (
+                          <img 
+                            src={activeClient.ownerId.avatar.secure_url} 
+                            alt={activeClient.ownerId.name} 
+                            className="w-14 h-14 rounded-xl object-cover shadow-sm border border-slate-200"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm border border-purple-200/50">
+                            {activeClient.ownerId.name?.charAt(0) || '?'}
+                          </div>
+                        )}
                         <div>
                           <p className="font-bold text-slate-800 text-lg">{activeClient.ownerId.name}</p>
                           <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-bold uppercase tracking-wider">Store Admin</span>
@@ -451,6 +467,16 @@ export default function Clients() {
                         <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Fraud Checks</p>
                           <p className="text-lg font-bold text-red-500">{activeMetrics.fraudChecks}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Categories</p>
+                          <p className="text-lg font-bold text-indigo-600">{activeMetrics.totalCategories}</p>
+                          <p className="text-[10px] text-slate-500 mt-1"><span className="font-semibold text-green-600">{activeMetrics.activeCategories}</span> Active</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Products</p>
+                          <p className="text-lg font-bold text-purple-600">{activeMetrics.totalProducts}</p>
+                          <p className="text-[10px] text-slate-500 mt-1"><span className="font-semibold text-green-600">{activeMetrics.activeProducts}</span> Active</p>
                         </div>
                         <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm col-span-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Courier Integration</p>
