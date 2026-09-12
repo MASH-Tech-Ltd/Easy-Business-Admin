@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
-import { UserPlus, MoreVertical, Shield, Search, Filter, ChevronLeft, ChevronRight, Edit2, Trash2, X } from 'lucide-react';
+import { UserPlus, MoreVertical, Shield, Search, Filter, ChevronLeft, ChevronRight, Edit2, Trash2, X, PackageMinus } from 'lucide-react';
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
@@ -15,6 +15,7 @@ export default function Clients() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteProductsModalOpen, setIsDeleteProductsModalOpen] = useState(false);
   const [activeClient, setActiveClient] = useState(null);
 
   const [formData, setFormData] = useState({ 
@@ -136,6 +137,23 @@ export default function Clients() {
     }
   };
 
+  const openDeleteProductsModal = (client) => {
+    setActiveClient(client);
+    setIsDeleteProductsModalOpen(true);
+  };
+
+  const handleDeleteProductsSubmit = async () => {
+    try {
+      const res = await api.delete(`/products/tenant/${activeClient._id}/all`);
+      if (res.data.success || res.data.status === 'ok') {
+        toast.success('All products for this store deleted successfully');
+        setIsDeleteProductsModalOpen(false);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete products');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -252,6 +270,13 @@ export default function Clients() {
                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      title="Delete All Products"
+                      onClick={() => openDeleteProductsModal(client)}
+                      className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                    >
+                      <PackageMinus className="w-4 h-4" />
                     </button>
                     <button 
                       title="Delete Client"
@@ -503,16 +528,33 @@ export default function Clients() {
 
       {isDeleteModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all text-center">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all text-center">
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Client?</h3>
-            <p className="text-slate-500 text-sm mb-6">Are you sure you want to delete <span className="font-bold text-slate-700">{activeClient?.name}</span>? This action is permanent and will delete the store and admin user.</p>
+            <p className="text-slate-500 text-sm mb-6">Are you sure you want to delete <span className="font-bold text-slate-700">{activeClient?.name}</span>? This action is permanent and will delete the store, admin user, all products, orders, categories, and settings associated with this merchant.</p>
             
             <div className="flex gap-3">
               <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">Cancel</button>
-              <button type="button" onClick={handleDeleteSubmit} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-red-500/30">Delete</button>
+              <button type="button" onClick={handleDeleteSubmit} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-red-500/30">Delete Store & Data</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteProductsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all text-center">
+            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <PackageMinus className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Delete All Products?</h3>
+            <p className="text-slate-500 text-sm mb-6">Are you sure you want to delete all products for <span className="font-bold text-slate-700">{activeClient?.name}</span>? This action is permanent and cannot be undone.</p>
+            
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setIsDeleteProductsModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">Cancel</button>
+              <button type="button" onClick={handleDeleteProductsSubmit} className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-orange-500/30">Delete Products</button>
             </div>
           </div>
         </div>
