@@ -17,7 +17,25 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const res = await axios.post(`${API_URL}/auth/refresh-token`, {}, { withCredentials: true });
+        if (res.data?.data?.accessToken) {
+          localStorage.setItem('accessToken', res.data.data.accessToken);
+          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.data.accessToken}`;
+          originalRequest.headers['Authorization'] = `Bearer ${res.data.data.accessToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        localStorage.removeItem('accessToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('accessToken');
       window.location.href = '/login';

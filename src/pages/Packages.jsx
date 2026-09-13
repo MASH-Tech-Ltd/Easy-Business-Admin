@@ -2,59 +2,16 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import { Plus, Edit2, CheckCircle, XCircle, Trash2 } from 'lucide-react';
-import { useRef } from 'react';
 
-const HoldToDeleteButton = ({ onDelete, isDeleting }) => {
-  const [progress, setProgress] = useState(0);
-  const [isHolding, setIsHolding] = useState(false);
-  const holdTimerRef = useRef(null);
-  const progressTimerRef = useRef(null);
-  const holdDuration = 5000;
-  const updateInterval = 50;
-
-  const startHold = () => {
-    setIsHolding(true);
-    setProgress(0);
-    
-    let elapsed = 0;
-    progressTimerRef.current = setInterval(() => {
-      elapsed += updateInterval;
-      setProgress(Math.min((elapsed / holdDuration) * 100, 100));
-    }, updateInterval);
-
-    holdTimerRef.current = setTimeout(() => {
-      clearInterval(progressTimerRef.current);
-      setProgress(100);
-      onDelete();
-      setIsHolding(false);
-    }, holdDuration);
-  };
-
-  const cancelHold = () => {
-    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-    setIsHolding(false);
-    setProgress(0);
-  };
-
+const DeleteButton = ({ onClick, isDeleting }) => {
   return (
     <button
-      onMouseDown={startHold}
-      onMouseUp={cancelHold}
-      onMouseLeave={cancelHold}
-      onTouchStart={startHold}
-      onTouchEnd={cancelHold}
+      onClick={onClick}
       disabled={isDeleting}
-      className={`relative overflow-hidden w-full py-2 px-3 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors select-none ${isHolding ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600'} ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`w-full py-2 px-3 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors select-none bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      <div 
-        className="absolute left-0 top-0 bottom-0 bg-rose-200 transition-all ease-linear"
-        style={{ width: `${progress}%`, transitionDuration: `${updateInterval}ms` }}
-      />
-      <span className="relative z-10 flex items-center gap-1.5 text-sm">
-        <Trash2 className="w-4 h-4" /> 
-        {isHolding ? 'Hold 5s...' : 'Delete'}
-      </span>
+      <Trash2 className="w-4 h-4" /> 
+      {isDeleting ? 'Deleting...' : 'Delete'}
     </button>
   );
 };
@@ -65,12 +22,13 @@ export default function Packages() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true });
+  const [formData, setFormData] = useState({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true, features: [] });
   const [actionLoading, setActionLoading] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const openCreateModal = () => {
     setEditId(null);
-    setFormData({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true });
+    setFormData({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true, features: [] });
     setIsModalOpen(true);
   };
 
@@ -81,7 +39,8 @@ export default function Packages() {
       price: pkg.price, 
       billingCycle: pkg.billingCycle, 
       productLimit: pkg.productLimit,
-      isActive: pkg.isActive !== false
+      isActive: pkg.isActive !== false,
+      features: pkg.features || []
     });
     setIsModalOpen(true);
   };
@@ -122,7 +81,7 @@ export default function Packages() {
         toast.success(res.data.message || (editId ? 'Package updated successfully' : 'Package created successfully'));
         setIsModalOpen(false);
         setEditId(null);
-        setFormData({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true });
+        setFormData({ name: '', price: '', billingCycle: 'monthly', productLimit: '', isActive: true, features: [] });
         fetchPackages(currentPage);
       }
     } catch (error) {
@@ -145,6 +104,29 @@ export default function Packages() {
     }
   };
 
+  const generateDefaultPackages = async () => {
+    const defaultFeatures = ['Custom Domain Setup', 'Advanced Analytics', '24/7 Priority Support'];
+    const defaultPackages = [
+      { name: 'Basic', price: 199, billingCycle: 'monthly', productLimit: 50, isActive: true, features: defaultFeatures },
+      { name: 'Standard', price: 299, billingCycle: 'monthly', productLimit: 200, isActive: true, features: defaultFeatures },
+      { name: 'Premium', price: 499, billingCycle: 'monthly', productLimit: 400, isActive: true, features: defaultFeatures },
+      { name: 'Basic', price: 1990, billingCycle: 'yearly', productLimit: 50, isActive: true, features: defaultFeatures },
+      { name: 'Standard', price: 2990, billingCycle: 'yearly', productLimit: 200, isActive: true, features: defaultFeatures },
+      { name: 'Premium', price: 4990, billingCycle: 'yearly', productLimit: 400, isActive: true, features: defaultFeatures }
+    ];
+
+    try {
+      toast.info('Generating default packages...');
+      for (const pkg of defaultPackages) {
+        await api.post('/packages/create-package', pkg);
+      }
+      toast.success('Default packages generated successfully');
+      fetchPackages(1);
+    } catch (error) {
+      toast.error('Failed to generate some packages');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -152,9 +134,16 @@ export default function Packages() {
           <h2 className="text-2xl font-bold text-slate-800">Pricing Packages</h2>
           <p className="text-slate-500 mt-1">Manage subscription tiers for your clients.</p>
         </div>
-        <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Package
-        </button>
+        <div className="flex items-center gap-3">
+          {packages.length === 0 && (
+            <button onClick={generateDefaultPackages} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200">
+              Generate Default Packages
+            </button>
+          )}
+          <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Package
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -183,7 +172,7 @@ export default function Packages() {
             <h3 className="text-2xl font-bold text-slate-800 pr-20">{pkg.name}</h3>
             
             <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-4xl font-extrabold text-slate-900">${pkg.price}</span>
+              <span className="text-4xl font-extrabold text-slate-900">৳ {pkg.price}</span>
               <span className="text-slate-500 font-medium">/{pkg.billingCycle === 'yearly' ? 'yr' : 'mo'}</span>
             </div>
             
@@ -199,8 +188,8 @@ export default function Packages() {
                 <Edit2 className="w-4 h-4" /> Edit
               </button>
               <div className="flex-1">
-                <HoldToDeleteButton 
-                  onDelete={() => handleDelete(pkg._id)}
+                <DeleteButton 
+                  onClick={() => setDeleteConfirmId(pkg._id)}
                   isDeleting={actionLoading === pkg._id}
                 />
               </div>
@@ -274,11 +263,76 @@ export default function Packages() {
                   </div>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Features</label>
+                <div className="space-y-2 mb-2 max-h-[150px] overflow-y-auto">
+                  {formData.features.map((feature, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input 
+                        type="text" 
+                        className="input-field flex-1" 
+                        value={feature} 
+                        onChange={(e) => {
+                          const newFeatures = [...formData.features];
+                          newFeatures[index] = e.target.value;
+                          setFormData({ ...formData, features: newFeatures });
+                        }} 
+                        placeholder="e.g. Advanced Analytics"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const newFeatures = formData.features.filter((_, i) => i !== index);
+                          setFormData({ ...formData, features: newFeatures });
+                        }}
+                        className="px-3 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg flex items-center justify-center transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setFormData({ ...formData, features: [...formData.features, ''] })}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Add Feature
+                </button>
+              </div>
+
               <div className="flex gap-3 mt-8">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">Cancel</button>
                 <button type="submit" className="flex-1 btn-primary">{editId ? 'Update Package' : 'Create Package'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 mb-4">
+              <Trash2 className="h-6 w-6 text-rose-600" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Package</h3>
+            <p className="text-slate-500 mb-6 text-sm">Are you sure you want to delete this package? This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  handleDelete(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }} 
+                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
