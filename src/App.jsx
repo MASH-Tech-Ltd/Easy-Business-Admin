@@ -16,8 +16,11 @@ import Security from './pages/Security';
 import Users from './pages/Users';
 import FraudChecks from './pages/FraudChecks';
 import CourierCredentials from './pages/CourierCredentials';
+import Addons from './pages/Addons';
+import CustomerIntelligence from './pages/CustomerIntelligence';
 import SupportList from './pages/SupportList';
 import SupportDetails from './pages/SupportDetails';
+import AddonRequests from './pages/AddonRequests';
 
 function App() {
   return (
@@ -37,10 +40,13 @@ function App() {
         <Route path="users" element={<Users />} />
         <Route path="health" element={<Health />} />
         <Route path="billing" element={<Billing />} />
+        <Route path="addon-requests" element={<AddonRequests />} />
         <Route path="logs" element={<Logs />} />
         <Route path="database" element={<Database />} />
         <Route path="security" element={<Security />} />
         <Route path="fraud-checks" element={<FraudChecks />} />
+        <Route path="intelligence" element={<CustomerIntelligence />} />
+        <Route path="addons" element={<Addons />} />
         <Route path="courier-credentials" element={<CourierCredentials />} />
         <Route path="support" element={<SupportList />} />
         <Route path="support/:id" element={<SupportDetails />} />

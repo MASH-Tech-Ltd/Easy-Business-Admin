@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { 
   LayoutDashboard, Package, Users, Settings, LogOut, 
   Activity, Server, CreditCard, Bell, Shield, Database,
-  LifeBuoy, ShieldCheck, Key
+  LifeBuoy, ShieldCheck, Key, ChevronDown, ChevronRight, Search
 } from 'lucide-react';
 
 const Badge = ({ children, type = 'NEW' }) => (
@@ -14,6 +14,77 @@ const Badge = ({ children, type = 'NEW' }) => (
     {children}
   </span>
 );
+
+const SidebarItem = ({ item }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const location = useLocation();
+
+  if (item.subItems) {
+    const isActive = item.subItems.some(sub => location.pathname === sub.path);
+    
+    // Auto expand if active on mount
+    useEffect(() => {
+      if (isActive) setIsExpanded(true);
+    }, [isActive]);
+
+    return (
+      <div className="flex flex-col gap-0.5">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`flex items-center px-3 py-2 w-full rounded-lg text-sm transition-colors group ${
+            isActive ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          }`}
+        >
+          <item.icon className={`w-4 h-4 mr-3 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>{item.name}</span>
+          {isExpanded ? (
+            <ChevronDown className="w-4 h-4 ml-auto text-slate-400" />
+          ) : (
+            <ChevronRight className="w-4 h-4 ml-auto text-slate-400" />
+          )}
+        </button>
+        {isExpanded && (
+          <div className="flex flex-col gap-0.5 pl-9 pr-2 py-1">
+            {item.subItems.map(sub => (
+              <NavLink
+                key={sub.name}
+                to={sub.path}
+                className={({ isActive: subActive }) =>
+                  `flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    subActive ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                  }`
+                }
+              >
+                <span>{sub.name}</span>
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={item.path}
+      className={({ isActive }) =>
+        `flex items-center px-3 py-2 rounded-lg text-sm transition-colors group ${
+          isActive 
+            ? 'bg-blue-50 text-blue-600 font-medium' 
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <item.icon className={`w-4 h-4 mr-3 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>{item.name}</span>
+          {item.badge && <Badge type={item.badge}>{item.badge}</Badge>}
+        </>
+      )}
+    </NavLink>
+  );
+};
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -74,8 +145,22 @@ export default function Sidebar() {
       items: [
         { name: 'Clients (Shops)', path: '/clients', icon: Users },
         { name: 'Merchants (Users)', path: '/users', icon: Users },
-        { name: 'Packages', path: '/packages', icon: Package },
-        { name: 'Billing', path: '/billing', icon: CreditCard },
+        { 
+          name: 'Packages', 
+          icon: Package,
+          subItems: [
+            { name: 'Manage Subscriptions', path: '/packages' },
+            { name: 'Add-ons', path: '/addons' }
+          ]
+        },
+        { 
+          name: 'Billing', 
+          icon: CreditCard,
+          subItems: [
+            { name: 'Overview', path: '/billing' },
+            { name: 'Add-on Requests', path: '/addon-requests' }
+          ]
+        },
         { name: 'Support', path: '/support', icon: LifeBuoy, badge: openTicketsCount > 0 ? String(openTicketsCount) : undefined },
       ]
     },
@@ -86,6 +171,7 @@ export default function Sidebar() {
         { name: 'Database', path: '/database', icon: Database, badge: 'BETA' },
         { name: 'Security', path: '/security', icon: Shield },
         { name: 'Fraud Checks', path: '/fraud-checks', icon: ShieldCheck, badge: 'NEW' },
+        { name: 'Customer Intelligence', path: '/intelligence', icon: Search, badge: 'NEW' },
         { name: 'Courier APIs', path: '/courier-credentials', icon: Key, badge: 'NEW' },
       ]
     }
@@ -119,25 +205,7 @@ export default function Sidebar() {
             )}
             <nav className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center px-3 py-2 rounded-lg text-sm transition-colors group ${
-                      isActive 
-                        ? 'bg-blue-50 text-blue-600 font-medium' 
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <item.icon className={`w-4 h-4 mr-3 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                      <span>{item.name}</span>
-                      {item.badge && <Badge type={item.badge}>{item.badge}</Badge>}
-                    </>
-                  )}
-                </NavLink>
+                <SidebarItem key={item.name} item={item} />
               ))}
             </nav>
           </div>
