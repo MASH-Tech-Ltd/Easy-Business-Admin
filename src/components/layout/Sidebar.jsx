@@ -137,7 +137,6 @@ export default function Sidebar() {
     {
       items: [
         { name: 'Overview', path: '/', icon: LayoutDashboard },
-        { name: 'System Health', path: '/health', icon: Activity, badge: 'NEW' },
       ]
     },
     {
@@ -167,12 +166,8 @@ export default function Sidebar() {
     {
       title: 'System',
       items: [
-        { name: 'Server Logs', path: '/logs', icon: Server },
-        { name: 'Database', path: '/database', icon: Database, badge: 'BETA' },
-        { name: 'Security', path: '/security', icon: Shield },
-        { name: 'Fraud Checks', path: '/fraud-checks', icon: ShieldCheck, badge: 'NEW' },
-        { name: 'Customer Intelligence', path: '/intelligence', icon: Search, badge: 'NEW' },
-        { name: 'Courier APIs', path: '/courier-credentials', icon: Key, badge: 'NEW' },
+        { name: 'Database', path: '/database', icon: Database },
+        { name: 'System Health', path: '/health', icon: Activity },
       ]
     }
   ];
@@ -213,10 +208,21 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-slate-100 bg-white space-y-1">
-        <button className="flex items-center px-3 py-2 w-full rounded-lg text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors group">
-          <Settings className="w-4 h-4 mr-3 text-slate-400 group-hover:text-slate-600" />
-          <span>Global Settings</span>
-        </button>
+        <NavLink 
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center px-3 py-2 w-full rounded-lg text-sm transition-colors group ${
+              isActive ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <Settings className={`w-4 h-4 mr-3 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+              <span>Global Settings</span>
+            </>
+          )}
+        </NavLink>
         <button 
           onClick={handleLogout}
           className="flex items-center px-3 py-2 w-full rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors group"

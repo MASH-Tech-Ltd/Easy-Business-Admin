@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Users, PackageOpen, CreditCard, TrendingUp, Activity, PlusCircle, Settings, ShieldAlert } from 'lucide-react';
+import { Users, PackageOpen, CreditCard, TrendingUp, Activity, PlusCircle, Settings, ShieldAlert, LifeBuoy, Database } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 
@@ -21,16 +22,16 @@ const StatCard = ({ title, value, icon: Icon, trend, trendUp }) => (
   </div>
 );
 
-const QuickAction = ({ title, desc, icon: Icon, colorClass }) => (
-  <button className="flex items-center text-left p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-slate-300 transition-all group">
-    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${colorClass}`}>
+const QuickAction = ({ title, desc, icon: Icon, colorClass, to }) => (
+  <Link to={to} className="flex items-center text-left p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-slate-300 transition-all group w-full">
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 shrink-0 ${colorClass}`}>
       <Icon className="w-6 h-6" />
     </div>
     <div>
       <h4 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{title}</h4>
       <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
     </div>
-  </button>
+  </Link>
 );
 
 export default function Overview() {
@@ -113,23 +114,40 @@ export default function Overview() {
             <div className="flex flex-col gap-4">
               <h3 className="text-base font-semibold text-slate-800 mb-2">Quick Actions</h3>
               <QuickAction 
-                title="Create Package" 
-                desc="Add a new subscription tier" 
+                title="Manage Packages" 
+                desc="Add or edit subscription tiers" 
                 icon={PlusCircle} 
                 colorClass="bg-blue-50 text-blue-600" 
+                to="/packages"
               />
               <QuickAction 
-                title="System Settings" 
-                desc="Manage global configurations" 
-                icon={Settings} 
+                title="System Health" 
+                desc="Monitor system performance" 
+                icon={Activity} 
+                colorClass="bg-emerald-50 text-emerald-600" 
+                to="/health"
+              />
+              <QuickAction 
+                title="Support Tickets" 
+                desc="View and resolve client issues" 
+                icon={LifeBuoy} 
+                colorClass="bg-amber-50 text-amber-600" 
+                to="/support"
+              />
+              <QuickAction 
+                title="View Clients" 
+                desc="Manage all tenant accounts" 
+                icon={Users} 
                 colorClass="bg-indigo-50 text-indigo-600" 
+                to="/clients"
               />
-              <QuickAction 
-                title="Security Alerts" 
-                desc="View 3 recent security notices" 
-                icon={ShieldAlert} 
-                colorClass="bg-rose-50 text-rose-600" 
-              />
+              {/* <QuickAction 
+                title="Database Overview" 
+                desc="Check database status and metrics" 
+                icon={Database} 
+                colorClass="bg-purple-50 text-purple-600" 
+                to="/database"
+              /> */}
             </div>
           </div>
         </>

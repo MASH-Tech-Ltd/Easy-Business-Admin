@@ -15,15 +15,20 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', formData);
       if (res.data.success || res.data.status === 'ok') {
+        const user = res.data.data.user;
+        if (user && user.role !== 'super_admin') {
+          throw new Error('Access denied. Super Admin privileges required.');
+        }
+        
         localStorage.setItem('accessToken', res.data.data.accessToken);
-        if (res.data.data.user) {
-          localStorage.setItem('user', JSON.stringify(res.data.data.user));
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
         navigate('/');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid credentials');
+      toast.error(error.message || error.response?.data?.message || 'Invalid credentials');
     } finally {
       setIsLoading(false);
     }

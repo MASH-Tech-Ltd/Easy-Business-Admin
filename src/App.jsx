@@ -21,6 +21,8 @@ import CustomerIntelligence from './pages/CustomerIntelligence';
 import SupportList from './pages/SupportList';
 import SupportDetails from './pages/SupportDetails';
 import AddonRequests from './pages/AddonRequests';
+import AdminProfile from './pages/AdminProfile';
+import GlobalSettings from './pages/GlobalSettings';
 
 function App() {
   return (
@@ -50,6 +52,8 @@ function App() {
         <Route path="courier-credentials" element={<CourierCredentials />} />
         <Route path="support" element={<SupportList />} />
         <Route path="support/:id" element={<SupportDetails />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="settings" element={<GlobalSettings />} />
       </Route>
     </Routes>
     </>
