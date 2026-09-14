@@ -1,23 +1,12 @@
 import { Activity, Cpu, HardDrive, Wifi, Server, Monitor, Shield, Code, Clock } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { useGetSystemHealthQuery } from '../store/apiSlice';
 
 export default function Health() {
-  const [healthData, setHealthData] = useState(null);
-
-  useEffect(() => {
-    const fetchHealth = async () => {
-      try {
-        const res = await api.get('/system/health');
-        setHealthData(res.data.data);
-      } catch (error) {
-        console.error('Failed to fetch health data');
-      }
-    };
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 60000); // refresh every minute
-    return () => clearInterval(interval);
-  }, []);
+  const { data: healthRes } = useGetSystemHealthQuery(undefined, {
+    pollingInterval: 60000,
+  });
+  
+  const healthData = healthRes?.data || null;
 
   return (
     <div className="space-y-8 w-full animate-fade-in pb-12">

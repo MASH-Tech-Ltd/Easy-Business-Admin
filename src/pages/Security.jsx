@@ -3,6 +3,7 @@ import {
   ShieldAlert, RefreshCw, Plus, Search, 
   Unlock, Eye, X, Activity, Globe, MonitorSmartphone 
 } from 'lucide-react';
+import { useGetBlockedIpsQuery, useGetSecurityLogsQuery } from '../store/apiSlice';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 
@@ -16,43 +17,28 @@ const formatDate = (dateString) => {
 
 export default function Security() {
   const [activeTab, setActiveTab] = useState('blocked-ips');
-  const [blockedIps, setBlockedIps] = useState([]);
-  const [securityLogs, setSecurityLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  
+  const { data: blockedIpsRes, isLoading: blockedLoading, refetch: refetchBlocked } = useGetBlockedIpsQuery(
+    { limit: 50 },
+    { skip: activeTab !== 'blocked-ips' }
+  );
+  
+  const { data: logsRes, isLoading: logsLoading, refetch: refetchLogs } = useGetSecurityLogsQuery(
+    { limit: 50 },
+    { skip: activeTab !== 'security-logs' }
+  );
+
+  const blockedIps = blockedIpsRes?.data?.ips || [];
+  const securityLogs = logsRes?.data?.logs || [];
+  const loading = blockedLoading || logsLoading;
   
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockForm, setBlockForm] = useState({ ipAddress: '', reason: '' });
   
   const [selectedLog, setSelectedLog] = useState(null);
 
-  const fetchBlockedIps = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/system/security/blocked-ips?limit=50');
-      setBlockedIps(res.data.data.ips || []);
-    } catch (err) {
-      toast.error('Failed to load blocked IPs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSecurityLogs = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/system/security/logs?limit=50');
-      setSecurityLogs(res.data.data.logs || []);
-    } catch (err) {
-      toast.error('Failed to load security logs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'blocked-ips') fetchBlockedIps();
-    if (activeTab === 'security-logs') fetchSecurityLogs();
-  }, [activeTab]);
+  const fetchBlockedIps = () => refetchBlocked();
+  const fetchSecurityLogs = () => refetchLogs();
 
   const handleSyncCache = async () => {
     try {

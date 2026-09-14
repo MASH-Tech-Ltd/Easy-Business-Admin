@@ -1,23 +1,70 @@
-import { CreditCard, DollarSign, Clock, Check, X, ExternalLink, Calendar, Trash2, ChevronLeft, ChevronRight, Search, Filter, AlertCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import api from '../utils/api';
+import {
+  CreditCard,
+  DollarSign,
+  Clock,
+  Check,
+  X,
+  ExternalLink,
+  Calendar,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Filter,
+  AlertCircle,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import api from "../utils/api";
+import {
+  useGetBillingOverviewQuery,
+  useGetAllSubscriptionsQuery,
+} from "../store/apiSlice";
+import React from "react";
 
-export default function Billing() {
-  const [billingData, setBillingData] = useState(null);
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [loading, setLoading] = useState(true);
+const Billing = () => {
   const [actionLoading, setActionLoading] = useState(null);
-  const [meta, setMeta] = useState({ page: 1, limit: 10, totalPages: 1, total: 0 });
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [sortOrder, setSortOrder] = useState('newest');
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   // Modal state
   const [editingSub, setEditingSub] = useState(null);
-  const [editForm, setEditForm] = useState({ startDate: '', endDate: '', status: '' });
+  const [editForm, setEditForm] = useState({
+    startDate: "",
+    endDate: "",
+    status: "",
+  });
+
+  // RTK Query Hooks
+  const {
+    data: billingOverviewRes,
+    isLoading: billingLoading,
+    refetch: refetchOverview,
+  } = useGetBillingOverviewQuery();
+  const {
+    data: subscriptionsRes,
+    isLoading: subsLoading,
+    refetch: refetchSubs,
+  } = useGetAllSubscriptionsQuery({
+    page,
+    limit: 10,
+    search,
+    status: filterStatus,
+    sortBy: sortOrder,
+  });
+
+  const billingData = billingOverviewRes?.data || null;
+  const subscriptions = subscriptionsRes?.data || [];
+  const meta = subscriptionsRes?.meta || {
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    total: 0,
+  };
+  const loading = billingLoading || subsLoading;
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -27,37 +74,19 @@ export default function Billing() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchInput]);
 
-  useEffect(() => {
-    fetchData();
-  }, [page, search, filterStatus, sortOrder]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [billingRes, subsRes] = await Promise.all([
-        api.get('/billing/overview').catch(() => ({ data: { data: null } })),
-        api.get(`/subscriptions/get-all-subscriptions?page=${page}&limit=${meta.limit}&search=${search}&status=${filterStatus}&sortBy=${sortOrder}`).catch(() => ({ data: { data: [] } }))
-      ]);
-      
-      setBillingData(billingRes.data?.data || null);
-      setSubscriptions(subsRes.data?.data || []);
-      if (subsRes.data?.meta) setMeta(subsRes.data.meta);
-    } catch (error) {
-      console.error('Failed to fetch data');
-      toast.error('Failed to load subscription data');
-    } finally {
-      setLoading(false);
-    }
+  const fetchData = () => {
+    refetchOverview();
+    refetchSubs();
   };
 
   const handleApprove = async (id) => {
     setActionLoading(id);
     try {
       await api.put(`/subscriptions/approve/${id}`);
-      toast.success('Subscription approved successfully');
+      toast.success("Subscription approved successfully");
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to approve');
+      toast.error(error.response?.data?.message || "Failed to approve");
       setActionLoading(null);
     }
   };
@@ -66,24 +95,25 @@ export default function Billing() {
     setActionLoading(id);
     try {
       await api.put(`/subscriptions/reject/${id}`);
-      toast.success('Subscription rejected');
+      toast.success("Subscription rejected");
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to reject');
+      toast.error(error.response?.data?.message || "Failed to reject");
       setActionLoading(null);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this subscription?')) return;
+    if (!window.confirm("Are you sure you want to delete this subscription?"))
+      return;
     setActionLoading(id);
     try {
       await api.delete(`/subscriptions/delete/${id}`);
-      toast.success('Subscription deleted');
+      toast.success("Subscription deleted");
       setEditingSub(null);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete');
+      toast.error(error.response?.data?.message || "Failed to delete");
       setActionLoading(null);
     }
   };
@@ -93,11 +123,11 @@ export default function Billing() {
     setActionLoading(editingSub._id);
     try {
       await api.put(`/subscriptions/update/${editingSub._id}`, editForm);
-      toast.success('Subscription updated successfully');
+      toast.success("Subscription updated successfully");
       setEditingSub(null);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update');
+      toast.error(error.response?.data?.message || "Failed to update");
     } finally {
       setActionLoading(null);
     }
@@ -106,20 +136,30 @@ export default function Billing() {
   const openManageModal = (sub) => {
     setEditingSub(sub);
     setEditForm({
-      startDate: sub.startDate ? new Date(sub.startDate).toISOString().slice(0, 10) : '',
-      endDate: sub.endDate ? new Date(sub.endDate).toISOString().slice(0, 10) : '',
-      status: sub.status || 'active'
+      startDate: sub.startDate
+        ? new Date(sub.startDate).toISOString().slice(0, 10)
+        : "",
+      endDate: sub.endDate
+        ? new Date(sub.endDate).toISOString().slice(0, 10)
+        : "",
+      status: sub.status || "active",
     });
   };
 
-  const pendingCount = subscriptions.filter(s => s.status === 'pending').length;
-  const activeCount = subscriptions.filter(s => s.status === 'active').length;
+  const pendingCount = subscriptions.filter(
+    (s) => s.status === "pending",
+  ).length;
+  const activeCount = subscriptions.filter((s) => s.status === "active").length;
 
   return (
     <div className="space-y-8 w-full pb-10">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Billing & Subscriptions</h2>
-        <p className="text-slate-500 text-sm mt-1">Manage tenant subscriptions, approve requests, and monitor revenue.</p>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+          Billing & Subscriptions
+        </h2>
+        <p className="text-slate-500 text-sm mt-1">
+          Manage tenant subscriptions, approve requests, and monitor revenue.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -128,56 +168,83 @@ export default function Billing() {
             <h3 className="font-semibold text-slate-600">Total Merchants</h3>
             <CreditCard className="w-5 h-5 text-indigo-500" />
           </div>
-          <p className="text-4xl font-bold text-slate-800">{billingData?.totalMerchants || '0'}</p>
+          <p className="text-4xl font-bold text-slate-800">
+            {billingData?.totalMerchants || "0"}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="flex justify-between mb-2">
-            <h3 className="font-semibold text-slate-600">Active Subscriptions</h3>
+            <h3 className="font-semibold text-slate-600">
+              Active Subscriptions
+            </h3>
             <Check className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-4xl font-bold text-slate-800">{billingData?.activeSubscriptions || '0'}</p>
+          <p className="text-4xl font-bold text-slate-800">
+            {billingData?.activeSubscriptions || "0"}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10"><Clock className="w-24 h-24 text-amber-500" /></div>
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Clock className="w-24 h-24 text-amber-500" />
+          </div>
           <div className="flex justify-between mb-2 relative z-10">
             <h3 className="font-semibold text-slate-600">Pending Requests</h3>
             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-2"></div>
           </div>
-          <p className="text-4xl font-bold text-slate-800 relative z-10">{billingData?.pendingInvoices || '0'}</p>
+          <p className="text-4xl font-bold text-slate-800 relative z-10">
+            {billingData?.pendingInvoices || "0"}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="flex justify-between mb-2">
             <h3 className="font-semibold text-slate-600">Revenue (Total)</h3>
             <span className="text-xl font-bold text-green-500">৳</span>
           </div>
-          <p className="text-3xl font-bold text-slate-800">৳{billingData?.totalRevenue?.toLocaleString() || '0'}</p>
+          <p className="text-3xl font-bold text-slate-800">
+            ৳{billingData?.totalRevenue?.toLocaleString() || "0"}
+          </p>
           <div className="text-[11px] font-medium text-slate-500 mt-2 flex justify-between items-center">
-            <p>Month: <span className="text-green-600">৳{billingData?.thisMonthRevenue?.toLocaleString() || '0'}</span></p>
-            <p>MRR: <span className="text-blue-600">৳{billingData?.mrr?.toLocaleString() || '0'}</span></p>
+            <p>
+              Month:{" "}
+              <span className="text-green-600">
+                ৳{billingData?.thisMonthRevenue?.toLocaleString() || "0"}
+              </span>
+            </p>
+            <p>
+              MRR:{" "}
+              <span className="text-blue-600">
+                ৳{billingData?.mrr?.toLocaleString() || "0"}
+              </span>
+            </p>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between bg-slate-50 gap-4">
-          <h3 className="font-bold text-slate-800 text-lg whitespace-nowrap">Subscription Management</h3>
+          <h3 className="font-bold text-slate-800 text-lg whitespace-nowrap">
+            Subscription Management
+          </h3>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <div className="relative flex-grow max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search store name or domain..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
               />
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
-              <select 
+              <select
                 value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setPage(1);
+                }}
                 className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
@@ -187,10 +254,13 @@ export default function Billing() {
                 <option value="expired">Expired</option>
               </select>
             </div>
-            
-            <select 
+
+            <select
               value={sortOrder}
-              onChange={(e) => { setSortOrder(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSortOrder(e.target.value);
+                setPage(1);
+              }}
               className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="default">Default Sort</option>
@@ -199,7 +269,7 @@ export default function Billing() {
             </select>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50/50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
@@ -215,55 +285,100 @@ export default function Billing() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                  <td
+                    colSpan="6"
+                    className="px-6 py-12 text-center text-slate-400"
+                  >
                     <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-3"></div>
                     Loading subscriptions...
                   </td>
                 </tr>
               ) : subscriptions.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                  <td
+                    colSpan="6"
+                    className="px-6 py-12 text-center text-slate-400"
+                  >
                     No subscriptions found.
                   </td>
                 </tr>
               ) : (
                 subscriptions.map((sub) => (
-                  <tr key={sub._id} className={`hover:bg-slate-50 transition-colors ${sub.status === 'pending' ? 'bg-amber-50/20' : ''}`}>
+                  <tr
+                    key={sub._id}
+                    className={`hover:bg-slate-50 transition-colors ${sub.status === "pending" ? "bg-amber-50/20" : ""}`}
+                  >
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{sub.tenantId?.name || 'Unknown Store'}</div>
-                      <div className="text-xs text-slate-400 mt-0.5">{sub.tenantId?.contactEmail || sub.tenantId?.ownerId?.email || sub.tenantId?.contactPhone || 'No contact info'}</div>
+                      <div className="font-semibold text-slate-900">
+                        {sub.tenantId?.name || "Unknown Store"}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {sub.tenantId?.contactEmail ||
+                          sub.tenantId?.ownerId?.email ||
+                          sub.tenantId?.contactPhone ||
+                          "No contact info"}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-semibold text-blue-600">
-                        {sub.isTrial ? 'Free Trial' : sub.packageId?.name || 'Unknown Package'}
+                        {sub.isTrial
+                          ? "Free Trial"
+                          : sub.packageId?.name || "Unknown Package"}
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">
-                        {sub.isTrial ? 'Free / Trial period' : `$${sub.packageId?.price || 0} / ${sub.packageId?.billingCycle || 'N/A'}`}
+                        {sub.isTrial
+                          ? "Free / Trial period"
+                          : `$${sub.packageId?.price || 0} / ${sub.packageId?.billingCycle || "N/A"}`}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center justify-center gap-1.5 w-24 py-1 rounded-full text-xs font-bold border
-                        ${sub.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : 
-                          sub.status === 'active' ? 'bg-green-50 text-green-600 border-green-200' : 
-                          'bg-slate-100 text-slate-500 border-slate-200'}`}
+                      <span
+                        className={`inline-flex items-center justify-center gap-1.5 w-24 py-1 rounded-full text-xs font-bold border
+                        ${
+                          sub.status === "pending"
+                            ? "bg-amber-50 text-amber-600 border-amber-200"
+                            : sub.status === "active"
+                              ? "bg-green-50 text-green-600 border-green-200"
+                              : "bg-slate-100 text-slate-500 border-slate-200"
+                        }`}
                       >
-                        {sub.status === 'pending' && <Clock className="w-3 h-3" />}
-                        {sub.status === 'active' && <Check className="w-3 h-3" />}
-                        {sub.status === 'cancelled' && <X className="w-3 h-3" />}
-                        {sub.status === 'expired' && <AlertCircle className="w-3 h-3" />}
-                        {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
+                        {sub.status === "pending" && (
+                          <Clock className="w-3 h-3" />
+                        )}
+                        {sub.status === "active" && (
+                          <Check className="w-3 h-3" />
+                        )}
+                        {sub.status === "cancelled" && (
+                          <X className="w-3 h-3" />
+                        )}
+                        {sub.status === "expired" && (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {sub.status.charAt(0).toUpperCase() +
+                          sub.status.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                      {sub.startDate ? new Date(sub.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                      {sub.startDate
+                        ? new Date(sub.startDate).toLocaleDateString(
+                            undefined,
+                            { year: "numeric", month: "short", day: "numeric" },
+                          )
+                        : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                      {sub.endDate ? new Date(sub.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                      {sub.endDate
+                        ? new Date(sub.endDate).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {sub.status === 'pending' ? (
+                      {sub.status === "pending" ? (
                         <div className="flex justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => handleApprove(sub._id)}
                             disabled={actionLoading === sub._id}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors disabled:opacity-50"
@@ -271,7 +386,7 @@ export default function Billing() {
                           >
                             <Check className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleReject(sub._id)}
                             disabled={actionLoading === sub._id}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors disabled:opacity-50"
@@ -281,11 +396,12 @@ export default function Billing() {
                           </button>
                         </div>
                       ) : (
-                        <button 
+                        <button
                           onClick={() => openManageModal(sub)}
                           className="inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                         >
-                          Manage <ExternalLink className="w-3 h-3 ml-1.5 text-slate-400" />
+                          Manage{" "}
+                          <ExternalLink className="w-3 h-3 ml-1.5 text-slate-400" />
                         </button>
                       )}
                     </td>
@@ -298,11 +414,21 @@ export default function Billing() {
         {meta.total > 0 && (
           <div className="px-6 py-4 bg-white/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-slate-500">
-              Showing <span className="font-medium">{subscriptions.length > 0 ? (meta.page - 1) * meta.limit + 1 : 0}</span> to <span className="font-medium">{Math.min(meta.page * meta.limit, meta.total)}</span> of <span className="font-medium">{meta.total}</span> results
+              Showing{" "}
+              <span className="font-medium">
+                {subscriptions.length > 0
+                  ? (meta.page - 1) * meta.limit + 1
+                  : 0}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium">
+                {Math.min(meta.page * meta.limit, meta.total)}
+              </span>{" "}
+              of <span className="font-medium">{meta.total}</span> results
             </p>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={meta.page === 1}
                 className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -311,8 +437,8 @@ export default function Billing() {
               <div className="text-sm font-medium text-slate-700 px-4">
                 Page {meta.page} of {meta.totalPages}
               </div>
-              <button 
-                onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+              <button
+                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                 disabled={meta.page >= meta.totalPages}
                 className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -328,17 +454,24 @@ export default function Billing() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-slate-800">Manage Subscription</h3>
-              <button onClick={() => setEditingSub(null)} className="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setEditingSub(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleUpdate} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Status</label>
-                <select 
-                  value={editForm.status} 
-                  onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                  Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, status: e.target.value })
+                  }
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Active</option>
@@ -347,23 +480,31 @@ export default function Billing() {
                   <option value="expired">Expired</option>
                 </select>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Start Date</label>
-                  <input 
-                    type="date" 
-                    value={editForm.startDate} 
-                    onChange={(e) => setEditForm({...editForm, startDate: e.target.value})}
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.startDate}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, startDate: e.target.value })
+                    }
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">End Date</label>
-                  <input 
-                    type="date" 
-                    value={editForm.endDate} 
-                    onChange={(e) => setEditForm({...editForm, endDate: e.target.value})}
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.endDate}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, endDate: e.target.value })
+                    }
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -391,7 +532,9 @@ export default function Billing() {
                     disabled={actionLoading === editingSub._id}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
                   >
-                    {actionLoading === editingSub._id ? 'Saving...' : 'Save Changes'}
+                    {actionLoading === editingSub._id
+                      ? "Saving..."
+                      : "Save Changes"}
                   </button>
                 </div>
               </div>
@@ -401,4 +544,6 @@ export default function Billing() {
       )}
     </div>
   );
-}
+};
+
+export default React.memo(Billing);

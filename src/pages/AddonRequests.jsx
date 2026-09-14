@@ -13,20 +13,28 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { useGetAddonRequestsQuery } from '../store/apiSlice';
 
 export default function AddonRequests() {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
   
   const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 1, limit: 10 });
-  const [stats, setStats] = useState({ totalActive: 0, totalPending: 0, totalRejected: 0, totalRevenue: 0 });
   const [actionLoading, setActionLoading] = useState(null);
+
+  const { data: requestsRes, isLoading: loading, refetch: fetchRequests } = useGetAddonRequestsQuery({
+    search: debouncedSearch,
+    status: filterStatus,
+    sortBy: sortOrder,
+    page,
+    limit: 10
+  });
+
+  const requests = requestsRes?.data?.data || requestsRes?.data || [];
+  const meta = requestsRes?.data?.meta || { total: 0, totalPages: 1, limit: 10 };
+  const stats = requestsRes?.data?.stats || { totalActive: 0, totalPending: 0, totalRejected: 0, totalRevenue: 0 };
 
   // Debounce search
   useEffect(() => {
@@ -36,38 +44,6 @@ export default function AddonRequests() {
     }, 500);
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/subscriptions/addons/requests', {
-        params: {
-          search: debouncedSearch,
-          status: filterStatus,
-          sortBy: sortOrder,
-          page,
-          limit: 10
-        }
-      });
-      if (res.data?.success || res.data?.status === 'ok') {
-        setRequests(res.data.data?.data || res.data.data || []);
-        if (res.data.data?.meta) {
-          setMeta(res.data.data.meta);
-        }
-        if (res.data.data?.stats) {
-          setStats(res.data.data.stats);
-        }
-      }
-    } catch (error) {
-      toast.error('Failed to load add-ons');
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, filterStatus, sortOrder, page]);
-
-  useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
 
   const handleAction = async (subscriptionId, addonId, action) => {
     try {

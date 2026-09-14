@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import { Plus, Edit2, CheckCircle, XCircle, Trash2, ShieldCheck, Zap, Mail, BarChart } from 'lucide-react';
+import { useGetAllAddonsQuery, useGetPredefinedAddonsQuery } from '../store/apiSlice';
 
 const DeleteButton = ({ onClick, isDeleting }) => {
   return (
@@ -17,8 +18,11 @@ const DeleteButton = ({ onClick, isDeleting }) => {
 };
 
 export default function Addons() {
-  const [addons, setAddons] = useState([]);
-  const [predefinedAddons, setPredefinedAddons] = useState([]);
+  const { data: addonsRes, refetch: refetchAddons } = useGetAllAddonsQuery();
+  const { data: predefinedRes } = useGetPredefinedAddonsQuery();
+
+  const addons = addonsRes?.data || [];
+  const predefinedAddons = predefinedRes?.data || [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ name: '', slug: '', description: '', price: '', billingCycle: 'monthly', defaultLimit: '', isActive: true });
@@ -45,32 +49,7 @@ export default function Addons() {
     setIsModalOpen(true);
   };
 
-  const fetchAddons = async () => {
-    try {
-      const res = await api.get(`/addons`);
-      if (res.data.status === 'ok') {
-        setAddons(res.data.data);
-      }
-    } catch (error) {
-      toast.error('Failed to fetch add-ons');
-    }
-  };
-
-  const fetchPredefinedAddons = async () => {
-    try {
-      const res = await api.get(`/addons/predefined`);
-      if (res.data.status === 'ok') {
-        setPredefinedAddons(res.data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch predefined add-ons');
-    }
-  };
-
-  useEffect(() => {
-    fetchAddons();
-    fetchPredefinedAddons();
-  }, []);
+  const fetchAddons = () => { refetchAddons(); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

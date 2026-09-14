@@ -1,21 +1,9 @@
 import { Database as DbIcon, HardDrive, RefreshCw } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { useGetDatabaseStatsQuery } from '../store/apiSlice';
 
 export default function Database() {
-  const [dbStats, setDbStats] = useState(null);
-
-  useEffect(() => {
-    const fetchDbStats = async () => {
-      try {
-        const res = await api.get('/system/database');
-        setDbStats(res.data.data);
-      } catch (error) {
-        console.error('Failed to fetch DB stats');
-      }
-    };
-    fetchDbStats();
-  }, []);
+  const { data: dbStatsRes, refetch } = useGetDatabaseStatsQuery();
+  const dbStats = dbStatsRes?.data || null;
 
   return (
     <div className="space-y-8 w-full">
@@ -24,7 +12,7 @@ export default function Database() {
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Database Management</h2>
           <p className="text-slate-500 text-sm mt-1">MongoDB cluster status and collection sizing.</p>
         </div>
-        <button className="bg-white border border-slate-200 px-3 py-2 rounded-lg text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50">
+        <button onClick={refetch} className="bg-white border border-slate-200 px-3 py-2 rounded-lg text-sm text-slate-700 flex items-center gap-2 hover:bg-slate-50">
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
