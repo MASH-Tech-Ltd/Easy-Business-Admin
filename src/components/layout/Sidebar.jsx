@@ -89,8 +89,14 @@ const SidebarItem = ({ item }) => {
 export default function Sidebar() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
+  const handleLogout = async () => {
+    try {
+      const { default: api } = await import('../../utils/api');
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout error', err);
+    }
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
@@ -100,7 +106,7 @@ export default function Sidebar() {
     const fetchCount = async () => {
       try {
         const { default: axios } = await import('axios');
-        const res = await axios.get('http://localhost:8000/api/v1/support/all-tickets', {
+        const res = await axios.get('/_content-sync/support/all-tickets', {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
         });
         const openTickets = res.data.data.filter(t => t.status === 'OPEN');
@@ -110,7 +116,7 @@ export default function Sidebar() {
 
     fetchCount();
 
-    const socket = io('http://localhost:8000');
+    const socket = io('/');
     const adminUserStr = localStorage.getItem('user');
     if (adminUserStr) {
       try {

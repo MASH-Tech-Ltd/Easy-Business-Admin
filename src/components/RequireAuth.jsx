@@ -10,8 +10,7 @@ export default function RequireAuth({ children }) {
     if (userStr) user = JSON.parse(userStr);
   } catch (e) {}
 
-  if (!token || !user || user.role !== 'super_admin') {
-    localStorage.removeItem('accessToken');
+  if (!user || user.role !== 'super_admin') {
     localStorage.removeItem('user');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

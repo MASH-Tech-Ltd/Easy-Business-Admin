@@ -20,7 +20,7 @@ export default function Login() {
           throw new Error('Access denied. Super Admin privileges required.');
         }
         
-        localStorage.setItem('accessToken', res.data.data.accessToken);
+        // Access token is automatically set as HttpOnly cookie by backend
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
         }

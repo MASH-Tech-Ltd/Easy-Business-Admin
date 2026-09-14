@@ -21,7 +21,7 @@ export default function SupportDetails() {
   useEffect(() => {
     fetchTicketDetails();
 
-    const newSocket = io('http://localhost:8000');
+    const newSocket = io('/');
     setSocket(newSocket);
 
     return () => {
@@ -91,7 +91,7 @@ export default function SupportDetails() {
 
   const fetchTicketDetails = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/support/ticket/${id}`, {
+      const response = await axios.get(`/_content-sync/support/ticket/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setTicket(response.data.data);
@@ -108,7 +108,7 @@ export default function SupportDetails() {
 
     setSending(true);
     try {
-      const response = await axios.post(`http://localhost:8000/api/v1/support/ticket/${id}/reply`, {
+      const response = await axios.post(`/_content-sync/support/ticket/${id}/reply`, {
         message: replyMessage
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
@@ -125,7 +125,7 @@ export default function SupportDetails() {
 
   const updateStatus = async (status) => {
     try {
-      await axios.patch(`http://localhost:8000/api/v1/support/ticket/${id}/status`, {
+      await axios.patch(`/_content-sync/support/ticket/${id}/status`, {
         status
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
@@ -140,7 +140,7 @@ export default function SupportDetails() {
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this ticket?')) return;
     try {
-      await axios.delete(`http://localhost:8000/api/v1/support/ticket/${id}`, {
+      await axios.delete(`/_content-sync/support/ticket/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       toast.success('Ticket deleted');

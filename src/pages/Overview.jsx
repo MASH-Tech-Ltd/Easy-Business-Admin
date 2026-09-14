@@ -47,7 +47,7 @@ export default function Overview() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/analytics/super-admin-stats', {
+        const response = await axios.get('/_content-sync/analytics/super-admin-stats', {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
         });
         setStats(response.data.data);

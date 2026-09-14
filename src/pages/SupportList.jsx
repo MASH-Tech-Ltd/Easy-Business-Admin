@@ -13,7 +13,7 @@ export default function SupportList() {
   useEffect(() => {
     fetchTickets();
 
-    const socket = io('http://localhost:8000');
+    const socket = io('/');
     const adminUserStr = localStorage.getItem('user');
     if (adminUserStr) {
       try {
@@ -49,7 +49,7 @@ export default function SupportList() {
 
   const fetchTickets = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/support/all-tickets', {
+      const response = await axios.get('/_content-sync/support/all-tickets', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setTickets(response.data.data);

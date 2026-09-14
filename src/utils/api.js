@@ -1,19 +1,13 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || '/_content-sync';
 
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Access tokens are handled automatically via HttpOnly cookies
 
 api.interceptors.response.use(
   (response) => response,
@@ -22,22 +16,18 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const res = await axios.post(`${API_URL}/auth/refresh-token`, {}, { withCredentials: true });
-        if (res.data?.data?.accessToken) {
-          localStorage.setItem('accessToken', res.data.data.accessToken);
-          api.defaults.headers.common['Authorization'] = `Bearer ${res.data.data.accessToken}`;
-          originalRequest.headers['Authorization'] = `Bearer ${res.data.data.accessToken}`;
-          return api(originalRequest);
-        }
+        await axios.post(`${API_URL}/auth/refresh-token`, {}, { withCredentials: true });
+        // The backend automatically sets the new _x_sess_tkn cookie
+        return api(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
 
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

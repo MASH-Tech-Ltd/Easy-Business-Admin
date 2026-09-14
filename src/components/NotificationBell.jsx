@@ -29,7 +29,7 @@ export default function NotificationBell({ userId }) {
   useEffect(() => {
     if (!userId) return;
 
-    const newSocket = io('http://localhost:8000');
+    const newSocket = io('/');
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -48,7 +48,7 @@ export default function NotificationBell({ userId }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/v1/notifications/my-notifications', {
+      const res = await axios.get('/_content-sync/notifications/my-notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setNotifications(res.data.data);
@@ -59,7 +59,7 @@ export default function NotificationBell({ userId }) {
 
   const markAsRead = async (id) => {
     try {
-      await axios.patch(`http://localhost:8000/api/v1/notifications/${id}/read`, {}, {
+      await axios.patch(`/_content-sync/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
@@ -70,7 +70,7 @@ export default function NotificationBell({ userId }) {
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch('http://localhost:8000/api/v1/notifications/read-all', {}, {
+      await axios.patch('/_content-sync/notifications/read-all', {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
