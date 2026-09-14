@@ -1,17 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LifeBuoy, Search, Eye, CircleDot } from 'lucide-react';
+import { LifeBuoy, Search, Eye, CircleDot, ChevronLeft, ChevronRight, Filter, AlertCircle, CheckCircle2, Calendar, CalendarDays } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
 export default function SupportList() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [stats, setStats] = useState({ solved: 0, pending: 0, open: 0, total: 0, thisMonthCount: 0, thisYearCount: 0 });
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, limit: 10 });
+  
   const navigate = useNavigate();
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+    }, 3000); // 3 seconds debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchTickets();
+    fetchStats();
 
     const socket = io('/');
     const adminUserStr = localStorage.getItem('user');
@@ -22,16 +41,14 @@ export default function SupportList() {
       } catch(err) {}
     }
     
-    socket.on('new_ticket', (ticket) => {
-      setTickets((prev) => {
-        // Prevent duplicate tickets
-        if (prev.some(t => t._id === ticket._id)) return prev;
-        return [ticket, ...prev];
-      });
+    socket.on('new_ticket', () => {
+      fetchTickets();
+      fetchStats();
     });
 
     socket.on('refresh_tickets', () => {
       fetchTickets();
+      fetchStats();
     });
 
     return () => {
@@ -45,14 +62,18 @@ export default function SupportList() {
       socket.off('refresh_tickets');
       socket.close();
     };
-  }, []);
+  }, [debouncedSearch, timeFilter, pagination.currentPage, pagination.limit]);
 
   const fetchTickets = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('/_content-sync/support/all-tickets', {
+      const response = await axios.get(`/_content-sync/support/all-tickets?search=${debouncedSearch}&page=${pagination.currentPage}&limit=${pagination.limit}&timeFilter=${timeFilter}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setTickets(response.data.data);
+      if (response.data.pagination) {
+        setPagination(response.data.pagination);
+      }
     } catch (error) {
       toast.error('Failed to load tickets');
     } finally {
@@ -60,19 +81,40 @@ export default function SupportList() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`/_content-sync/support/ticket-stats?timeFilter=${timeFilter}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      setStats(response.data.data);
+    } catch (error) {}
+  };
+
+
+
   const getStatusColor = (status) => {
     switch(status) {
       case 'OPEN': return 'text-red-600 bg-red-50';
-      case 'IN_PROGRESS': return 'text-yellow-600 bg-yellow-50';
+      case 'IN_PROGRESS':
+      case 'PENDING': return 'text-yellow-600 bg-yellow-50';
       case 'RESOLVED': return 'text-green-600 bg-green-50';
       case 'CLOSED': return 'text-slate-600 bg-slate-50';
       default: return 'text-blue-600 bg-blue-50';
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'HIGH': return 'text-red-600';
+      case 'MEDIUM': return 'text-yellow-600';
+      case 'LOW': return 'text-green-600';
+      default: return 'text-slate-600';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <LifeBuoy className="w-6 h-6 text-blue-600" />
@@ -82,19 +124,74 @@ export default function SupportList() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Total Open/Pending</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.open + stats.pending}</p>
+          </div>
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <AlertCircle className="w-6 h-6 text-blue-600" />
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Total Solved</p>
+            <p className="text-2xl font-bold text-green-600">{stats.solved}</p>
+          </div>
+          <div className="p-3 bg-green-50 rounded-lg">
+            <CheckCircle2 className="w-6 h-6 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Tickets This Month</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.thisMonthCount}</p>
+          </div>
+          <div className="p-3 bg-purple-50 rounded-lg">
+            <Calendar className="w-6 h-6 text-purple-600" />
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">Tickets This Year</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.thisYearCount}</p>
+          </div>
+          <div className="p-3 bg-orange-50 rounded-lg">
+            <CalendarDays className="w-6 h-6 text-orange-600" />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl gap-4 flex-wrap">
           <div className="relative w-72">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text"
-              placeholder="Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by ID, Subject, or Store..."
               className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500" />
+            <select 
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="py-2 pl-3 pr-8 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="all">All Time</option>
+              <option value="weekly">Past Week</option>
+              <option value="monthly">Past Month</option>
+              <option value="yearly">Past Year</option>
+            </select>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full">
             <thead>
               <tr className="bg-white border-b border-slate-200">
@@ -109,11 +206,13 @@ export default function SupportList() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500">Loading...</td>
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500">Loading tickets...</td>
                 </tr>
               ) : tickets.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500">No support tickets found.</td>
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
+                    {searchQuery ? 'No tickets match your search.' : 'No support tickets found.'}
+                  </td>
                 </tr>
               ) : (
                 tickets.map((ticket) => (
@@ -133,7 +232,9 @@ export default function SupportList() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600">{ticket.priority}</span>
+                      <span className={`text-sm font-medium ${getPriorityColor(ticket.priority)}`}>
+                        {ticket.priority}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-slate-600">
@@ -153,6 +254,29 @@ export default function SupportList() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-white rounded-b-xl">
+          <div className="text-sm text-slate-500">
+            Showing page {pagination.currentPage} of {pagination.totalPages || 1}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+              disabled={pagination.currentPage <= 1 || loading}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+              disabled={pagination.currentPage >= pagination.totalPages || loading}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

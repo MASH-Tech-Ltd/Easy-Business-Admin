@@ -148,12 +148,12 @@ export default function Billing() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="flex justify-between mb-2">
             <h3 className="font-semibold text-slate-600">Revenue (Total)</h3>
-            <DollarSign className="w-5 h-5 text-green-500" />
+            <span className="text-xl font-bold text-green-500">৳</span>
           </div>
-          <p className="text-3xl font-bold text-slate-800">${billingData?.totalRevenue?.toLocaleString() || '0'}</p>
+          <p className="text-3xl font-bold text-slate-800">৳{billingData?.totalRevenue?.toLocaleString() || '0'}</p>
           <div className="text-[11px] font-medium text-slate-500 mt-2 flex justify-between items-center">
-            <p>Month: <span className="text-green-600">${billingData?.thisMonthRevenue?.toLocaleString() || '0'}</span></p>
-            <p>MRR: <span className="text-blue-600">${billingData?.mrr?.toLocaleString() || '0'}</span></p>
+            <p>Month: <span className="text-green-600">৳{billingData?.thisMonthRevenue?.toLocaleString() || '0'}</span></p>
+            <p>MRR: <span className="text-blue-600">৳{billingData?.mrr?.toLocaleString() || '0'}</span></p>
           </div>
         </div>
       </div>

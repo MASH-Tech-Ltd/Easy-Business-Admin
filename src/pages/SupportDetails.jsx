@@ -137,6 +137,18 @@ export default function SupportDetails() {
     }
   };
 
+  const handlePriorityChange = async (newPriority) => {
+    try {
+      await axios.patch(`/_content-sync/support/ticket/${id}/priority`, { priority: newPriority }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      setTicket({ ...ticket, priority: newPriority });
+      toast.success('Priority updated');
+    } catch (error) {
+      toast.error('Failed to update priority');
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this ticket?')) return;
     try {
@@ -158,6 +170,15 @@ export default function SupportDetails() {
     return <div className="p-8 text-center text-red-500">Ticket not found</div>;
   }
 
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'HIGH': return 'text-red-600 bg-red-50';
+      case 'MEDIUM': return 'text-yellow-600 bg-yellow-50';
+      case 'LOW': return 'text-green-600 bg-green-50';
+      default: return 'text-slate-600 bg-slate-50';
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
       <div className="flex justify-between items-center mb-6">
@@ -177,7 +198,16 @@ export default function SupportDetails() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <select
+            value={ticket.priority}
+            onChange={(e) => handlePriorityChange(e.target.value)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium border border-transparent hover:border-slate-200 focus:outline-none cursor-pointer transition-colors ${getPriorityColor(ticket.priority)}`}
+          >
+            <option className="text-green-600 font-medium" value="LOW">Priority: LOW</option>
+            <option className="text-yellow-600 font-medium" value="MEDIUM">Priority: MEDIUM</option>
+            <option className="text-red-600 font-medium" value="HIGH">Priority: HIGH</option>
+          </select>
           {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
             <button 
               onClick={() => updateStatus('RESOLVED')}
@@ -211,7 +241,10 @@ export default function SupportDetails() {
                     : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'
                 }`}>
                   <div className="text-[11px] font-medium opacity-70 mb-1 flex items-center gap-1.5">
-                    <span className="font-bold">{msg.senderId?.name || (isAdmin ? 'Admin' : 'Merchant')}</span>
+                    <span className="font-bold">
+                      {msg.senderId?.name || (isAdmin ? 'Admin' : 'Merchant')}
+                      {!isAdmin && ticket.tenantId?.name && ` (${ticket.tenantId.name})`}
+                    </span>
                     <span className="opacity-50">•</span>
                     <Clock className="w-3 h-3" />
                     {new Date(msg.createdAt || msg._id.getTimestamp?.() || Date.now()).toLocaleString()}
