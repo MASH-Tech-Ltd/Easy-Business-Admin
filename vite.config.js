@@ -15,7 +15,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/_content-sync/, '')
       },
       '/socket.io': {
-        target: 'ws://localhost:8000',
+        target: 'http://localhost:8000',
         ws: true,
       }
     }

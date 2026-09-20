@@ -131,12 +131,8 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const { default: axios } = await import("axios");
-        const res = await axios.get("/_content-sync/support/all-tickets", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const { default: api } = await import("../../utils/api");
+        const res = await api.get("/support/all-tickets");
         const openTickets = res.data.data.filter(
           (t) => t.status === "OPEN" || t.status === "PENDING",
         );

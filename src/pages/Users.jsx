@@ -103,7 +103,7 @@ export default function Users() {
 
       {isModalOpen && activeUser && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-blue-600" /> User Details
@@ -140,32 +140,58 @@ export default function Users() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                    Contact Phone
-                  </p>
-                  <p className="text-slate-800 font-medium">
-                    {activeUser.phone || "Not provided"}
-                  </p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Contact Phone
+                    </p>
+                    <p className="text-slate-800 font-medium text-lg">
+                      {activeUser.phone || "Not provided"}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Full Address
+                    </p>
+                    <p className="text-slate-800 font-medium">
+                      {activeUser.address || "Not provided"}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                    Full Address
-                  </p>
-                  <p className="text-slate-800 font-medium whitespace-pre-line">
-                    {activeUser.address || "Not provided"}
-                  </p>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
                     Additional Details
                   </p>
-                  <p className="text-slate-800 font-medium whitespace-pre-line">
-                    {activeUser.details || "No details provided"}
-                  </p>
+                  <div className="space-y-3">
+                    {(() => {
+                      if (!activeUser.details) return <p className="text-slate-500">No details provided</p>;
+                      try {
+                        const parsed = typeof activeUser.details === 'string' ? JSON.parse(activeUser.details) : activeUser.details;
+                        if (typeof parsed === 'object' && parsed !== null) {
+                          return (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {Object.entries(parsed).map(([key, value]) => (
+                                <div key={key} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                                  </p>
+                                  <p className="text-slate-800 text-sm break-words">
+                                    {String(value)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return <p className="text-slate-800">{String(parsed)}</p>;
+                      } catch (e) {
+                        return <p className="text-slate-800 whitespace-pre-line break-words">{activeUser.details}</p>;
+                      }
+                    })()}
+                  </div>
                 </div>
 
                 {activeUser.tenantId && (

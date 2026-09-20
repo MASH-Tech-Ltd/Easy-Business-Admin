@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import { ArrowLeft, Send, CheckCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -91,9 +91,7 @@ export default function SupportDetails() {
 
   const fetchTicketDetails = async () => {
     try {
-      const response = await axios.get(`/_content-sync/support/ticket/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
+      const response = await api.get(`/support/ticket/${id}`);
       setTicket(response.data.data);
     } catch (error) {
       toast.error('Failed to load ticket details');
@@ -108,10 +106,8 @@ export default function SupportDetails() {
 
     setSending(true);
     try {
-      const response = await axios.post(`/_content-sync/support/ticket/${id}/reply`, {
+      const response = await api.post(`/support/ticket/${id}/reply`, {
         message: replyMessage
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setTicket(response.data.data);
       setReplyMessage('');
@@ -125,10 +121,8 @@ export default function SupportDetails() {
 
   const updateStatus = async (status) => {
     try {
-      await axios.patch(`/_content-sync/support/ticket/${id}/status`, {
+      await api.patch(`/support/ticket/${id}/status`, {
         status
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       setTicket({ ...ticket, status });
       toast.success(`Ticket marked as ${status}`);
@@ -139,9 +133,7 @@ export default function SupportDetails() {
 
   const handlePriorityChange = async (newPriority) => {
     try {
-      await axios.patch(`/_content-sync/support/ticket/${id}/priority`, { priority: newPriority }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
+      await api.patch(`/support/ticket/${id}/priority`, { priority: newPriority });
       setTicket({ ...ticket, priority: newPriority });
       toast.success('Priority updated');
     } catch (error) {
@@ -152,9 +144,7 @@ export default function SupportDetails() {
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this ticket?')) return;
     try {
-      await axios.delete(`/_content-sync/support/ticket/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
+      await api.delete(`/support/ticket/${id}`);
       toast.success('Ticket deleted');
       navigate('/support');
     } catch (error) {
