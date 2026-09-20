@@ -24,6 +24,7 @@ const SupportDetails = lazy(() => import("./pages/SupportDetails"));
 const AddonRequests = lazy(() => import("./pages/AddonRequests"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
             <Route path="support/:id" element={<SupportDetails />} />
             <Route path="profile" element={<AdminProfile />} />
             <Route path="settings" element={<GlobalSettings />} />
+            <Route path="notifications" element={<Notifications />} />
           </Route>
         </Routes>
       </Suspense>

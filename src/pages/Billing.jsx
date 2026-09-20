@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import api from "../utils/api";
 import {
@@ -32,6 +33,7 @@ const Billing = () => {
 
   // Modal state
   const [editingSub, setEditingSub] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [editForm, setEditForm] = useState({
     startDate: "",
     endDate: "",
@@ -79,6 +81,26 @@ const Billing = () => {
     refetchSubs();
   };
 
+  useEffect(() => {
+    const adminUserStr = localStorage.getItem("user");
+    let socket;
+    if (adminUserStr) {
+      try {
+        socket = io("/");
+        const user = JSON.parse(adminUserStr);
+        socket.emit("join_user_room", user._id);
+        
+        socket.on("refresh_subscriptions", fetchData);
+      } catch (err) {}
+    }
+    return () => {
+      if (socket) {
+        socket.off("refresh_subscriptions");
+        socket.close();
+      }
+    };
+  }, []);
+
   const handleApprove = async (id) => {
     setActionLoading(id);
     try {
@@ -103,14 +125,17 @@ const Billing = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this subscription?"))
-      return;
+  const handleDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
+
+  const executeDelete = async (id) => {
     setActionLoading(id);
     try {
       await api.delete(`/subscriptions/delete/${id}`);
       toast.success("Subscription deleted");
       setEditingSub(null);
+      setDeleteConfirmId(null);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete");
@@ -448,6 +473,41 @@ const Billing = () => {
           </div>
         )}
       </div>
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden p-6 text-center transform transition-all">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Subscription?</h3>
+            <p className="text-slate-500 text-sm mb-6">
+              Are you sure you want to delete this subscription? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2.5 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex-1"
+                disabled={actionLoading === deleteConfirmId}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executeDelete(deleteConfirmId)}
+                className="px-4 py-2.5 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors flex-1 flex items-center justify-center gap-2"
+                disabled={actionLoading === deleteConfirmId}
+              >
+                {actionLoading === deleteConfirmId ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingSub && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">

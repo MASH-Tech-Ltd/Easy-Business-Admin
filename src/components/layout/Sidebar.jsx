@@ -205,6 +205,7 @@ export default function Sidebar() {
     {
       title: "System",
       items: [
+        { name: "Notifications", path: "/notifications", icon: Bell },
         { name: "Database", path: "/database", icon: Database },
         { name: "System Health", path: "/health", icon: Activity },
         { name: "Security & IPs", path: "/security", icon: ShieldCheck },

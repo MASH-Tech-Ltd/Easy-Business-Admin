@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check } from 'lucide-react';
 import { io } from 'socket.io-client';
-import axios from 'axios';
+import api from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function NotificationBell({ userId }) {
   const [notifications, setNotifications] = useState([]);
@@ -38,6 +39,33 @@ export default function NotificationBell({ userId }) {
 
     newSocket.on('new_notification', (notification) => {
       setNotifications(prev => [notification, ...prev]);
+      toast(
+        <div onClick={() => setIsOpen(true)} className="flex items-start gap-3 cursor-pointer">
+          <div className="bg-blue-50 p-2 rounded-full flex-shrink-0 mt-1 shadow-sm border border-blue-100">
+            <Bell className="w-5 h-5 text-blue-600 animate-pulse" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 text-sm tracking-tight">{notification.title || 'New Notification'}</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">{notification.message || 'You have a new alert.'}</p>
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          style: { 
+            borderRadius: '16px', 
+            padding: '16px', 
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+          }
+        }
+      );
     });
 
     return () => {
@@ -48,10 +76,9 @@ export default function NotificationBell({ userId }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get('/_content-sync/notifications/my-notifications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      setNotifications(res.data.data);
+      const res = await api.get('/notifications/my-notifications');
+      const data = res.data?.data || {};
+      setNotifications(Array.isArray(data) ? data : (data.notifications || []));
     } catch (error) {
       console.error('Failed to load notifications', error);
     }
@@ -59,9 +86,7 @@ export default function NotificationBell({ userId }) {
 
   const markAsRead = async (id) => {
     try {
-      await axios.patch(`/_content-sync/notifications/${id}/read`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
+      await api.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
     } catch (error) {
       console.error('Failed to mark notification as read', error);
@@ -70,9 +95,7 @@ export default function NotificationBell({ userId }) {
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch('/_content-sync/notifications/read-all', {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
+      await api.patch('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (error) {
       console.error('Failed to mark all as read', error);
@@ -126,7 +149,7 @@ export default function NotificationBell({ userId }) {
               </div>
             ) : (
               <div className="flex flex-col">
-                {notifications.map((notification) => (
+                {notifications.slice(0, 5).map((notification) => (
                   <button
                     key={notification._id}
                     onClick={() => handleNotificationClick(notification)}
@@ -148,6 +171,14 @@ export default function NotificationBell({ userId }) {
                 ))}
               </div>
             )}
+          </div>
+          <div className="p-2 border-t border-slate-100 bg-slate-50/50">
+            <button
+              onClick={() => { setIsOpen(false); navigate('/notifications'); }}
+              className="w-full text-center text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline p-1"
+            >
+              View all notifications
+            </button>
           </div>
         </div>
       )}

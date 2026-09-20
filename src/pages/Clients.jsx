@@ -1,3 +1,4 @@
+import { io } from "socket.io-client";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
@@ -13,6 +14,7 @@ import {
   Trash2,
   X,
   PackageMinus,
+  Sparkles,
 } from "lucide-react";
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
@@ -64,10 +66,36 @@ export default function Clients() {
     domain: "",
     subdomain: "",
     status: "",
+    showDemoSeed: true,
   });
 
   const [activeMetrics, setActiveMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
+
+  useEffect(() => {
+    const adminUserStr = localStorage.getItem("user");
+    let socket;
+    if (adminUserStr) {
+      try {
+        socket = io("/");
+        const user = JSON.parse(adminUserStr);
+        socket.emit("join_user_room", user._id);
+        
+        socket.on("refresh_tenants", () => {
+          // Trigger refetch depending on what RTK query or fetch is used
+          // We can use a simple state toggle to trigger re-renders or assume refetch() exists
+          if (typeof refetch === 'function') refetch();
+          if (typeof fetchData === 'function') fetchData();
+        });
+      } catch (err) {}
+    }
+    return () => {
+      if (socket) {
+        socket.off("refresh_tenants");
+        socket.close();
+      }
+    };
+  }, []);
 
   const fetchClients = () => {
     refetch();
@@ -126,6 +154,7 @@ export default function Clients() {
       domain: client.domain || "",
       subdomain: client.slug || "",
       status: client.status,
+      showDemoSeed: client.showDemoSeed !== false,
     });
     setActiveMetrics(null);
     fetchClientMetrics(client._id);
@@ -320,6 +349,24 @@ export default function Clients() {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      title={client.showDemoSeed !== false ? "Disable Demo Seed Button" : "Enable Demo Seed Button"}
+                      onClick={async () => {
+                        try {
+                          const newStatus = client.showDemoSeed === false ? true : false;
+                          const res = await api.patch(`/tenants/update-tenant/${client._id}`, { showDemoSeed: newStatus });
+                          if (res.data.success || res.data.status === "ok") {
+                            toast.success(`Demo Seed Button ${newStatus ? 'enabled' : 'disabled'} for ${client.name}`);
+                            fetchClients();
+                          }
+                        } catch (error) {
+                          toast.error("Failed to update demo seed status");
+                        }
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${client.showDemoSeed !== false ? 'text-indigo-600 hover:bg-indigo-50 bg-indigo-50/50' : 'text-slate-400 hover:bg-slate-100'}`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </button>
                     <button
                       title="Edit Client"
                       onClick={() => openEditModal(client)}
@@ -634,6 +681,24 @@ export default function Clients() {
                       <option value="inactive">🔴 Inactive</option>
                     </select>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Show Demo Seed Button</label>
+                      <p className="text-xs text-slate-500 mt-0.5">Allow merchant to seed demo data in their dashboard</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditFormData({ ...editFormData, showDemoSeed: !editFormData.showDemoSeed })}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${editFormData.showDemoSeed ? 'bg-blue-600' : 'bg-slate-300'}`}
+                      role="switch"
+                      aria-checked={editFormData.showDemoSeed}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editFormData.showDemoSeed ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Right Side: Merchant / Tenant Details Read-only */}
@@ -691,7 +756,7 @@ export default function Clients() {
                             Store Database ID
                           </p>
                           <p className="text-sm font-mono text-slate-600">
-                            {activeClient.databaseName || "N/A"}
+                            {activeClient._id || "N/A"}
                           </p>
                         </div>
                       </div>
