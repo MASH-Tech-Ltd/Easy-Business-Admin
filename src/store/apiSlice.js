@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const adminApi = createApi({
   reducerPath: 'adminApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/_content-sync',
+    baseUrl: import.meta.env.VITE_API_URL || '/_content-sync',
     credentials: 'include',
   }),
   // Enable automatic refetching when the user reconnects to the network
