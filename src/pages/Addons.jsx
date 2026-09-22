@@ -96,10 +96,10 @@ export default function Addons() {
 
   const generateDefaultAddons = async () => {
     const defaultAddons = [
-      { name: 'Fraud Check (Basic)', slug: 'fraud_check', description: 'Advanced ML-based fraud detection for your orders.', price: 500, billingCycle: 'monthly', defaultLimit: 100, isActive: true },
-      { name: 'Fraud Check (Pro)', slug: 'fraud_check_pro', description: 'Unlimited fraud detection for high volume stores.', price: 2000, billingCycle: 'monthly', defaultLimit: 99999, isActive: true },
-      { name: 'SMS Notifications', slug: 'sms_notify', description: 'Send automated SMS updates to your customers.', price: 300, billingCycle: 'monthly', defaultLimit: 500, isActive: true },
-      { name: 'Advanced Analytics', slug: 'advanced_analytic', description: 'Deep dive into your store performance metrics.', price: 1000, billingCycle: 'monthly', defaultLimit: 1, isActive: true },
+      { name: 'Fraud Check (Basic)', slug: 'fraud_check', description: 'Advanced ML-based fraud detection for your orders.', price: 100, billingCycle: 'monthly', defaultLimit: 2, isActive: true },
+      { name: 'Fraud Check (Pro)', slug: 'fraud_check_pro', description: 'Unlimited fraud detection for high volume stores.', price: 200, billingCycle: 'monthly', defaultLimit: 150, isActive: true },
+      { name: 'Abandoned Checkout', slug: 'abandoned_checkout', description: 'Capture and recover abandoned checkout leads to increase sales.', price: 9.99, billingCycle: 'monthly', defaultLimit: 4, isActive: true },
+      { name: 'Courier Automation', slug: 'courier_automation', description: 'Automate your shipping and fulfillment processes seamlessly.', price: 99, billingCycle: 'monthly', defaultLimit: 100, isActive: true },
     ];
 
     try {
