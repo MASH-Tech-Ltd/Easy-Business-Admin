@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -7,8 +7,8 @@ export default function GlobalSettings() {
   const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
-    platformName: 'MashEasy',
-    supportEmail: 'support@masheasy.com',
+    platformName: 'MASH ECO',
+    supportEmail: 'support@MASH ECO.com',
     currency: 'USD',
     timezone: 'UTC+06:00',
     maintenanceMode: false,

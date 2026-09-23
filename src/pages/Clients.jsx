@@ -1,4 +1,4 @@
-import { io } from "socket.io-client";
+﻿import { io } from "socket.io-client";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
@@ -483,7 +483,7 @@ export default function Clients() {
                     onChange={(e) =>
                       setFormData({ ...formData, tenantName: e.target.value })
                     }
-                    placeholder="Mikes MashEasy"
+                    placeholder="Mikes MASH ECO"
                   />
                 </div>
                 <div>
@@ -500,7 +500,7 @@ export default function Clients() {
                     onChange={(e) =>
                       setFormData({ ...formData, subdomain: e.target.value })
                     }
-                    placeholder="mikes-masheasy"
+                    placeholder="mikes-MASH ECO"
                   />
                 </div>
               </div>

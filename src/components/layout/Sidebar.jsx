@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
@@ -216,7 +216,7 @@ export default function Sidebar() {
           <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg overflow-hidden">
             <img
               src="/MEasy.png"
-              alt="MashEasy"
+              alt="MASH ECO"
               className="w-full h-full object-contain"
             />
           </div>

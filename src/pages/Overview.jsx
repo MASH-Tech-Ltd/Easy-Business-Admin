@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { useGetSuperAdminStatsQuery } from "../store/apiSlice";
 import {
@@ -89,7 +89,7 @@ const Overview = () => {
       // Title
       doc.setFontSize(22);
       doc.setTextColor(37, 99, 235); // Blue
-      doc.text("MashEasy Report", 14, 22);
+      doc.text("MASH ECO Report", 14, 22);
       
       // Subtitle
       doc.setFontSize(11);
@@ -151,7 +151,7 @@ const Overview = () => {
         });
       }
       
-      doc.save("MashEasy_Platform_Report.pdf");
+      doc.save("masheco_Platform_Report.pdf");
       toast.success("Report downloaded successfully");
     } catch (error) {
       console.error("PDF Generation Error:", error);
