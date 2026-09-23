@@ -64,7 +64,7 @@ export default function Clients() {
 
   const [editFormData, setEditFormData] = useState({
     name: "",
-    domain: "",
+    customDomain: "",
     subdomain: "",
     status: "",
     showDemoSeed: true,
@@ -169,7 +169,7 @@ export default function Clients() {
     setActiveClient(client);
     setEditFormData({
       name: client.name,
-      domain: client.domain || "",
+      customDomain: client.customDomain || "",
       subdomain: client.slug || "",
       status: client.status,
       showDemoSeed: client.showDemoSeed !== false,
@@ -673,11 +673,11 @@ export default function Clients() {
                       <input
                         type="text"
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
-                        value={editFormData.domain}
+                        value={editFormData.customDomain}
                         onChange={(e) =>
                           setEditFormData({
                             ...editFormData,
-                            domain: e.target.value,
+                            customDomain: e.target.value,
                           })
                         }
                         placeholder="e.g. domain.com"
