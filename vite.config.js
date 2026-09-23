@@ -19,6 +19,11 @@ export default defineConfig({
         ws: true,
       }
     }
+  },
+  preview: {
+    host: true,
+    port: 3005,
+    allowedHosts: ['adminsec.masheco.com']
   }
 })
 
