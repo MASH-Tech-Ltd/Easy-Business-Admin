@@ -1,8 +1,8 @@
-﻿import { io } from "socket.io-client";
+import { io } from "socket.io-client";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { Plus, Edit2, CheckCircle, XCircle, Trash2, Star } from "lucide-react";
+import { Plus, Edit2, CheckCircle, XCircle, Trash2, Star, ThumbsUp } from "lucide-react";
 import { useGetAllPackagesQuery } from "../store/apiSlice";
 
 const DeleteButton = ({ onClick, isDeleting }) => {
@@ -39,6 +39,7 @@ export default function Packages() {
     description: "",
     isActive: true,
     isPopular: false,
+    isRecommended: false,
     features: [],
   });
   const [actionLoading, setActionLoading] = useState(null);
@@ -80,6 +81,7 @@ export default function Packages() {
       description: "",
       isActive: true,
       isPopular: false,
+      isRecommended: false,
       features: [],
     });
     setIsModalOpen(true);
@@ -96,6 +98,7 @@ export default function Packages() {
       description: pkg.description || "",
       isActive: pkg.isActive !== false,
       isPopular: pkg.isPopular || false,
+      isRecommended: pkg.isRecommended || false,
       features: pkg.features || [],
     });
     setIsModalOpen(true);
@@ -139,6 +142,7 @@ export default function Packages() {
           description: "",
           isActive: true,
           isPopular: false,
+          isRecommended: false,
           features: [],
         });
         fetchPackages(currentPage);
@@ -175,6 +179,7 @@ export default function Packages() {
         productLimit: 199,
         isActive: true,
         isPopular: false,
+        isRecommended: false,
         description: "Turn your Facebook shop into a professional e-commerce store. An affordable, essential package built for new sellers launching their brand.",
         tagline: "Simple & Affordable Online Store for Small Businesses",
         features: [
@@ -197,6 +202,7 @@ export default function Packages() {
         productLimit: 399,
         isActive: true,
         isPopular: true,
+        isRecommended: true,
         description: "Scale your growing business with higher product capacity, smart insights, and priority support.",
         tagline: "More Capacity & Insights for Growing Businesses",
         features: [
@@ -219,6 +225,7 @@ export default function Packages() {
         productLimit: 699,
         isActive: true,
         isPopular: false,
+        isRecommended: false,
         description: "Maximum power for large catalogs with advanced inventory control and instant priority support.",
         tagline: "Full-Scale Power for High Volume & Large Catalogs",
         features: [
@@ -241,6 +248,7 @@ export default function Packages() {
         productLimit: 199,
         isActive: true,
         isPopular: false,
+        isRecommended: false,
         description: "Turn your Facebook shop into a professional e-commerce store. An affordable, essential package built for new sellers launching their brand.",
         tagline: "Simple & Affordable Online Store for Small Businesses",
         features: [
@@ -263,6 +271,7 @@ export default function Packages() {
         productLimit: 399,
         isActive: true,
         isPopular: true,
+        isRecommended: true,
         description: "Scale your growing business with higher product capacity, smart insights, and priority support.",
         tagline: "More Capacity & Insights for Growing Businesses",
         features: [
@@ -285,6 +294,7 @@ export default function Packages() {
         productLimit: 699,
         isActive: true,
         isPopular: false,
+        isRecommended: false,
         description: "Maximum power for large catalogs with advanced inventory control and instant priority support.",
         tagline: "Full-Scale Power for High Volume & Large Catalogs",
         features: [
@@ -354,6 +364,11 @@ export default function Packages() {
             ></div>
 
             <div className="absolute top-5 right-5 flex items-center gap-2">
+              {pkg.isRecommended && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                  <ThumbsUp className="w-3.5 h-3.5 fill-current" /> Recommended
+                </span>
+              )}
               {pkg.isPopular && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-600 border border-purple-200">
                   <Star className="w-3.5 h-3.5 fill-current" /> Popular
@@ -545,7 +560,7 @@ export default function Packages() {
                     Status
                   </label>
                   <div className="flex items-center h-10">
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
                         className="sr-only peer"
@@ -557,7 +572,7 @@ export default function Packages() {
                           })
                         }
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="relative shrink-0 w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       <span className="ml-3 text-sm font-medium text-slate-700">
                         Active Package
                       </span>
@@ -569,7 +584,7 @@ export default function Packages() {
                     Most Popular
                   </label>
                   <div className="flex items-center h-10">
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
                         className="sr-only peer"
@@ -581,9 +596,33 @@ export default function Packages() {
                           })
                         }
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                      <div className="relative shrink-0 w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                       <span className="ml-3 text-sm font-medium text-slate-700">
                         Popular Package
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Recommended
+                  </label>
+                  <div className="flex items-center h-10">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData.isRecommended}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            isRecommended: e.target.checked,
+                          })
+                        }
+                      />
+                      <div className="relative shrink-0 w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                      <span className="ml-3 text-sm font-medium text-slate-700">
+                        Recommended Package
                       </span>
                     </label>
                   </div>

@@ -115,6 +115,13 @@ export const adminApi = createApi({
       }),
       providesTags: ['Security'],
     }),
+    getVisitorLogs: builder.query({
+      query: (params) => ({
+        url: '/system/security/visitor-logs',
+        params
+      }),
+      providesTags: ['Security'],
+    }),
   }),
 });
 
@@ -134,4 +141,5 @@ export const {
   useGetSystemHealthQuery,
   useGetBlockedIpsQuery,
   useGetSecurityLogsQuery,
+  useGetVisitorLogsQuery,
 } = adminApi;

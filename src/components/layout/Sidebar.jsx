@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
+  MessageSquare,
 } from "lucide-react";
 
 const Badge = ({ children, type = "NEW" }) => (
@@ -195,6 +196,11 @@ export default function Sidebar() {
           path: "/support",
           icon: LifeBuoy,
           badge: openTicketsCount > 0 ? String(openTicketsCount) : undefined,
+        },
+        {
+          name: "Contact Inquiries",
+          path: "/contact-inquiries",
+          icon: MessageSquare,
         },
       ],
     },

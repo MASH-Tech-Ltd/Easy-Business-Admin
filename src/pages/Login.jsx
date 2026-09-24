@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -7,11 +7,13 @@ import api from '../utils/api';
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setFieldErrors({});
     try {
       const res = await api.post('/auth/login', formData);
       if (res.data.success || res.data.status === 'ok') {
@@ -28,7 +30,17 @@ export default function Login() {
         navigate('/');
       }
     } catch (error) {
-      toast.error(error.message || error.response?.data?.message || 'Invalid credentials');
+      if (error.response?.data?.errors) {
+        const errors = {};
+        error.response.data.errors.forEach(err => {
+          const field = err.field.replace('body.', ''); // Handle nested Zod errors like 'body.password'
+          errors[field] = err.message;
+        });
+        setFieldErrors(errors);
+        toast.error('Please fix the errors in the form');
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'Invalid credentials');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,6 +74,9 @@ export default function Login() {
                   placeholder="admin@platform.com"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -77,6 +92,9 @@ export default function Login() {
                   placeholder="••••••••"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.password}</p>
+              )}
             </div>
 
             <button

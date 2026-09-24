@@ -99,12 +99,12 @@ export default function Health() {
           </div>
           <div className="flex items-center gap-8">
             <div>
-              <p className="text-3xl font-bold text-slate-800 tracking-tight">{healthData?.ipAddress || '---'}</p>
+              <p className="text-3xl font-bold text-slate-800 tracking-tight">{healthData?.ipAddress ? '***.***.***.***' : '---'}</p>
               <p className="text-xs text-slate-500 mt-1 font-medium">Internal IP Address</p>
             </div>
             <div className="h-12 w-px bg-slate-200"></div>
             <div>
-              <p className="text-xl font-bold text-slate-800 tracking-tight">{healthData?.hostname || '---'}</p>
+              <p className="text-xl font-bold text-slate-800 tracking-tight">{healthData?.hostname ? '********' : '---'}</p>
               <p className="text-xs text-slate-500 mt-1 font-medium">Hostname</p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import {
   ShieldAlert, RefreshCw, Plus, Search, 
   Unlock, Eye, X, Activity, Globe, MonitorSmartphone 
 } from 'lucide-react';
-import { useGetBlockedIpsQuery, useGetSecurityLogsQuery } from '../store/apiSlice';
+import { useGetBlockedIpsQuery, useGetSecurityLogsQuery, useGetVisitorLogsQuery } from '../store/apiSlice';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 
@@ -28,9 +28,15 @@ export default function Security() {
     { skip: activeTab !== 'security-logs' }
   );
 
+  const { data: visitorLogsRes, isLoading: visitorLoading, refetch: refetchVisitor } = useGetVisitorLogsQuery(
+    { limit: 50 },
+    { skip: activeTab !== 'visitor-logs' }
+  );
+
   const blockedIps = blockedIpsRes?.data?.ips || [];
   const securityLogs = logsRes?.data?.logs || [];
-  const loading = blockedLoading || logsLoading;
+  const visitorLogs = visitorLogsRes?.data?.logs || [];
+  const loading = blockedLoading || logsLoading || visitorLoading;
   
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockForm, setBlockForm] = useState({ ipAddress: '', reason: '' });
@@ -127,6 +133,15 @@ export default function Security() {
             >
               <Activity className="w-4 h-4" />
               Security Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('visitor-logs')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'visitor-logs' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              Visitor Logs
             </button>
           </div>
           <div className="relative">
@@ -253,6 +268,55 @@ export default function Security() {
                 {securityLogs.length === 0 && !loading && (
                   <tr>
                     <td colSpan="7" className="px-6 py-12 text-center text-slate-500">No security logs found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'visitor-logs' && (
+            <table className="w-full text-left">
+              <thead className="bg-slate-100/50 text-slate-500 text-sm font-medium">
+                <tr>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Context Info</th>
+                  <th className="px-6 py-4">IP Address</th>
+                  <th className="px-6 py-4">Browser Details</th>
+                  <th className="px-6 py-4">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {visitorLogs.map(log => (
+                  <tr key={log._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${log.role === 'Merchant' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                        {log.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {log.storeName ? (
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700">{log.storeName}</p>
+                          <p className="text-xs text-slate-500">Owner: {log.ownerName || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Merchant Dashboard</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-sm font-medium text-slate-700">{log.ipAddress}</span>
+                    </td>
+                    <td className="px-6 py-4 max-w-[250px]">
+                      <p className="text-xs text-slate-500 truncate" title={log.userAgent}>{log.userAgent}</p>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {formatDate(log.accessedAt)}
+                    </td>
+                  </tr>
+                ))}
+                {visitorLogs.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500">No visitor logs found.</td>
                   </tr>
                 )}
               </tbody>

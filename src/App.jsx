@@ -25,6 +25,7 @@ const AddonRequests = lazy(() => import("./pages/AddonRequests"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const ContactInquiries = lazy(() => import("./pages/ContactInquiries"));
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
             <Route path="courier-credentials" element={<CourierCredentials />} />
             <Route path="support" element={<SupportList />} />
             <Route path="support/:id" element={<SupportDetails />} />
+            <Route path="contact-inquiries" element={<ContactInquiries />} />
             <Route path="profile" element={<AdminProfile />} />
             <Route path="settings" element={<GlobalSettings />} />
             <Route path="notifications" element={<Notifications />} />

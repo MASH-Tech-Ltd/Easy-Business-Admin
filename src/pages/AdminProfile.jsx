@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Mail, Shield, Key, Camera, Save, Activity, Settings, Calendar } from 'lucide-react';
+import { User, Mail, Shield, Key, Camera, Save, Activity, Settings, Calendar, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 
@@ -18,6 +18,12 @@ export default function AdminProfile() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [passwordStep, setPasswordStep] = useState(1);
+  const [passData, setPassData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '', otp: '', resetToken: '' });
+  const [isPassLoading, setIsPassLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -110,6 +116,46 @@ export default function AdminProfile() {
     setUser(prev => ({ ...prev, name: formData.name, email: formData.email }));
     setIsEditing(false);
     toast.success('Profile updated successfully!');
+  };
+
+  const handleRequestPasswordChange = async (e) => {
+    e.preventDefault();
+    if (!passData.oldPassword) return toast.error('Please enter your old password');
+    setIsPassLoading(true);
+    try {
+      const res = await api.post('/auth/change-password-request', { oldPassword: passData.oldPassword });
+      toast.success('OTP sent to your email address!');
+      setPasswordStep(2);
+      setPassData(prev => ({ ...prev, resetToken: res.data.data.resetToken }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to verify old password');
+    } finally {
+      setIsPassLoading(false);
+    }
+  };
+
+  const handleVerifyPasswordChange = async (e) => {
+    e.preventDefault();
+    if (!passData.otp) return toast.error('Please enter the OTP');
+    if (passData.newPassword.length < 8) return toast.error('New password must be at least 8 characters');
+    if (passData.newPassword !== passData.confirmPassword) return toast.error('Passwords do not match');
+    
+    setIsPassLoading(true);
+    try {
+      await api.post('/auth/change-password-verify', { 
+        otp: passData.otp, 
+        newPassword: passData.newPassword,
+        resetToken: passData.resetToken
+      });
+      toast.success('Password changed successfully! You may need to log in again.');
+      setIsChangePasswordOpen(false);
+      setPasswordStep(1);
+      setPassData({ oldPassword: '', newPassword: '', confirmPassword: '', otp: '', resetToken: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setIsPassLoading(false);
+    }
   };
 
   return (
@@ -295,7 +341,10 @@ export default function AdminProfile() {
                   <h4 className="text-sm font-bold text-slate-800">Password</h4>
                   <p className="text-sm text-slate-500 mt-0.5">Last changed 3 months ago</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+                <button 
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+                >
                   <Key className="w-4 h-4" />
                   Change Password
                 </button>
@@ -323,6 +372,108 @@ export default function AdminProfile() {
               >
                 Yes, Update
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-slate-800">Change Password</h2>
+              <button 
+                onClick={() => { setIsChangePasswordOpen(false); setPasswordStep(1); setPassData({ oldPassword: '', newPassword: '', confirmPassword: '', otp: '' }); }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {passwordStep === 1 ? (
+                <form onSubmit={handleRequestPasswordChange} className="space-y-4">
+                  <p className="text-sm text-slate-500 mb-4">Please enter your current password. We will send an OTP to your email to verify your identity.</p>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">Current Password</label>
+                    <div className="relative">
+                      <input 
+                        type={showPass ? 'text' : 'password'}
+                        value={passData.oldPassword}
+                        onChange={e => setPassData({...passData, oldPassword: e.target.value})}
+                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-10"
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isPassLoading}
+                    className="w-full py-2.5 mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex justify-center items-center gap-2"
+                  >
+                    {isPassLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Send Verification OTP'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyPasswordChange} className="space-y-4">
+                  <p className="text-sm text-slate-500 mb-4">We've sent a 6-digit OTP to <strong>{user.email}</strong>. Enter it below along with your new password.</p>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">Verification OTP</label>
+                    <input 
+                      type="text"
+                      maxLength={6}
+                      value={passData.otp}
+                      onChange={e => setPassData({...passData, otp: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-center tracking-widest font-mono text-lg"
+                      placeholder="------"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">New Password</label>
+                    <div className="relative">
+                      <input 
+                        type={showPass ? 'text' : 'password'}
+                        value={passData.newPassword}
+                        onChange={e => setPassData({...passData, newPassword: e.target.value})}
+                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-10"
+                        placeholder="••••••••"
+                        required
+                        minLength={8}
+                      />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">Confirm New Password</label>
+                    <input 
+                      type={showPass ? 'text' : 'password'}
+                      value={passData.confirmPassword}
+                      onChange={e => setPassData({...passData, confirmPassword: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isPassLoading}
+                    className="w-full py-2.5 mt-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex justify-center items-center gap-2"
+                  >
+                    {isPassLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Verify & Update Password'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
