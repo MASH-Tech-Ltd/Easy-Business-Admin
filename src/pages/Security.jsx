@@ -135,6 +135,21 @@ export default function Security() {
     return pages;
   };
 
+  const getRoleBadgeColor = (role) => {
+    if (!role) return 'bg-slate-100 text-slate-700 border border-slate-200';
+    const roleLower = role.toLowerCase();
+    if (roleLower.includes('admin') || roleLower.includes('super')) {
+      return 'bg-blue-50 text-blue-700 border border-blue-200';
+    }
+    if (roleLower.includes('merchant')) {
+      return 'bg-purple-50 text-purple-700 border border-purple-200';
+    }
+    if (roleLower.includes('customer')) {
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+    }
+    return 'bg-slate-100 text-slate-700 border border-slate-200';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -346,7 +361,7 @@ export default function Security() {
                 {visitorLogs.map(log => (
                   <tr key={log._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${log.role === 'Merchant' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                      <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${getRoleBadgeColor(log.role)}`}>
                         {log.role}
                       </span>
                     </td>
