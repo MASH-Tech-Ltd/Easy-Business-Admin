@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   ShieldAlert, RefreshCw, Plus, Search, 
   Unlock, Eye, X, Activity, Globe, MonitorSmartphone,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2
 } from 'lucide-react';
 import { useGetBlockedIpsQuery, useGetSecurityLogsQuery, useGetVisitorLogsQuery } from '../store/apiSlice';
 import api from '../utils/api';
@@ -87,6 +87,19 @@ export default function Security() {
     }
   };
 
+  const handleClearVisitorLogs = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL visitor logs from the database? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await api.delete('/system/security/visitor-logs');
+      toast.success('All visitor logs deleted successfully');
+      refetchVisitor();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to clear visitor logs');
+    }
+  };
+
   const handleUnblock = async (ip) => {
     try {
       await api.delete(`/system/security/blocked-ips/${encodeURIComponent(ip)}`);
@@ -158,6 +171,15 @@ export default function Security() {
           <p className="text-slate-500 mt-1">Manage blocked IPs, users, and security logs.</p>
         </div>
         <div className="flex items-center gap-3">
+          {activeTab === 'visitor-logs' && (
+            <button 
+              onClick={handleClearVisitorLogs}
+              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear Visitor Logs
+            </button>
+          )}
           <button 
             onClick={handleSyncCache}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
