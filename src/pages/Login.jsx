@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, ShieldAlert } from 'lucide-react';
+import { Mail, Lock, LogIn, ShieldAlert, KeyRound, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 
@@ -10,6 +10,11 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // 2FA Challenge States
+  const [is2FARequired, setIs2FARequired] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -17,6 +22,14 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', formData);
       if (res.data.success || res.data.status === 'ok') {
+        // Check 2FA requirement
+        if (res.data.data?.requires2FA) {
+          setIs2FARequired(true);
+          setTwoFactorToken(res.data.data.twoFactorToken);
+          toast.info('2FA Authenticator code required');
+          return;
+        }
+
         const user = res.data.data.user;
         if (user && user.role !== 'super_admin') {
           throw new Error('Access denied. Super Admin privileges required.');
@@ -46,6 +59,35 @@ export default function Login() {
     }
   };
 
+  const handleVerify2FA = async (e) => {
+    e.preventDefault();
+    if (!twoFactorCode.trim()) {
+      return toast.error('Please enter your 6-digit authenticator or recovery code');
+    }
+    setIsLoading(true);
+    try {
+      const res = await api.post('/auth/2fa/verify-login', {
+        twoFactorToken,
+        code: twoFactorCode.trim(),
+      });
+      if (res.data.success || res.data.status === 'ok') {
+        const user = res.data.data.user;
+        if (user && user.role !== 'super_admin') {
+          throw new Error('Access denied. Super Admin privileges required.');
+        }
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+        toast.success(res.data.message || 'Welcome back, Admin!');
+        navigate('/');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Invalid 2FA code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Decorative background elements */}
@@ -57,60 +99,118 @@ export default function Login() {
           <div className="flex flex-col items-center mb-8">
             <img src="/MEasy.png" alt="MASH ECO SuperAdmin" className="w-24 h-24 object-contain mb-2" />
             <h2 className="text-3xl font-bold text-white text-center">MASH ECO SuperAdmin</h2>
-            <p className="text-slate-400 mt-2 text-center text-sm">Secure platform management</p>
+            <p className="text-slate-400 mt-2 text-center text-sm">
+              {is2FARequired ? 'Two-Factor Verification' : 'Secure platform management'}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="admin@platform.com"
-                />
+          {!is2FARequired ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="admin@platform.com"
+                  />
+                </div>
+                {fieldErrors.email && (
+                  <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.email}</p>
+                )}
               </div>
-              {fieldErrors.email && (
-                <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.email}</p>
-              )}
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="••••••••"
-                />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+                {fieldErrors.password && (
+                  <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.password}</p>
+                )}
               </div>
-              {fieldErrors.password && (
-                <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.password}</p>
-              )}
-            </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" /> Secure Login
-                </>
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" /> Secure Login
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerify2FA} className="space-y-6">
+              <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-xs text-blue-300 flex items-start gap-2.5">
+                <ShieldAlert className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                <span>
+                  Enter the 6-digit code generated by your Authenticator App (Google Authenticator / Authy), or one of your 8-digit recovery codes.
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">2FA Authenticator Code</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="text"
+                    id="totpCode"
+                    name="totpCode"
+                    autoComplete="one-time-code"
+                    required
+                    autoFocus
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono tracking-widest text-center text-lg"
+                    placeholder="123456"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <KeyRound className="w-5 h-5" /> Verify 2FA & Login
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIs2FARequired(false);
+                  setTwoFactorCode('');
+                  setTwoFactorToken('');
+                }}
+                className="w-full py-2 text-xs text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Login
+              </button>
+            </form>
+          )}
           
           <div className="mt-6 text-center">
             <p className="text-xs text-slate-500 mb-2">

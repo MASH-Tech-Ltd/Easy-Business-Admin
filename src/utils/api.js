@@ -27,8 +27,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const url = originalRequest?.url || '';
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthAction = 
+      url.includes('/auth/login') || 
+      url.includes('/auth/change-password') || 
+      url.includes('/auth/2fa') ||
+      url.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && !isAuthAction && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -56,7 +63,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthAction && originalRequest._retry) {
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
