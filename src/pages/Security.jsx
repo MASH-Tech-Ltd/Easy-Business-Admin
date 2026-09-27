@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   ShieldAlert, RefreshCw, Plus, Search, 
-  Unlock, Eye, X, Activity, Globe, MonitorSmartphone 
+  Unlock, Eye, X, Activity, Globe, MonitorSmartphone,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { useGetBlockedIpsQuery, useGetSecurityLogsQuery, useGetVisitorLogsQuery } from '../store/apiSlice';
 import api from '../utils/api';
@@ -17,25 +18,56 @@ const formatDate = (dateString) => {
 
 export default function Security() {
   const [activeTab, setActiveTab] = useState('blocked-ips');
-  
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
+
+  const handleLimitChange = (e) => {
+    setLimit(Number(e.target.value));
+    setPage(1);
+  };
+
+  const queryParams = { page, limit, search };
+
   const { data: blockedIpsRes, isLoading: blockedLoading, refetch: refetchBlocked } = useGetBlockedIpsQuery(
-    { limit: 50 },
+    queryParams,
     { skip: activeTab !== 'blocked-ips' }
   );
   
   const { data: logsRes, isLoading: logsLoading, refetch: refetchLogs } = useGetSecurityLogsQuery(
-    { limit: 50 },
+    queryParams,
     { skip: activeTab !== 'security-logs' }
   );
 
   const { data: visitorLogsRes, isLoading: visitorLoading, refetch: refetchVisitor } = useGetVisitorLogsQuery(
-    { limit: 50 },
+    queryParams,
     { skip: activeTab !== 'visitor-logs' }
   );
 
   const blockedIps = blockedIpsRes?.data?.ips || [];
   const securityLogs = logsRes?.data?.logs || [];
   const visitorLogs = visitorLogsRes?.data?.logs || [];
+
+  const currentTotal = activeTab === 'blocked-ips'
+    ? (blockedIpsRes?.data?.total || 0)
+    : activeTab === 'security-logs'
+    ? (logsRes?.data?.total || 0)
+    : (visitorLogsRes?.data?.total || 0);
+
+  const totalPages = Math.max(1, Math.ceil(currentTotal / limit));
+  const startItem = currentTotal > 0 ? (page - 1) * limit + 1 : 0;
+  const endItem = Math.min(page * limit, currentTotal);
+
   const loading = blockedLoading || logsLoading || visitorLoading;
   
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -79,11 +111,28 @@ export default function Security() {
   };
 
   const getMethodColor = (method) => {
+    if (!method) return 'text-slate-600 bg-slate-50';
     if (method.includes('GET')) return 'text-blue-600 bg-blue-50';
     if (method.includes('POST')) return 'text-rose-600 bg-rose-50';
     if (method.includes('PATCH') || method.includes('PUT')) return 'text-amber-600 bg-amber-50';
     if (method.includes('DELETE')) return 'text-red-600 bg-red-50';
     return 'text-slate-600 bg-slate-50';
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxButtons = 5;
+    let start = Math.max(1, page - Math.floor(maxButtons / 2));
+    let end = Math.min(totalPages, start + maxButtons - 1);
+
+    if (end - start + 1 < maxButtons) {
+      start = Math.max(1, end - maxButtons + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
   };
 
   return (
@@ -114,10 +163,10 @@ export default function Security() {
       {/* Main Content Area */}
       <div className="glass rounded-2xl overflow-hidden flex flex-col">
         {/* Tabs & Search */}
-        <div className="flex items-center justify-between p-2 px-4 border-b border-slate-200 bg-white">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-2 px-4 border-b border-slate-200 bg-white gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto">
             <button
-              onClick={() => setActiveTab('blocked-ips')}
+              onClick={() => handleTabChange('blocked-ips')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'blocked-ips' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
               }`}
@@ -126,7 +175,7 @@ export default function Security() {
               Blocked IPs
             </button>
             <button
-              onClick={() => setActiveTab('security-logs')}
+              onClick={() => handleTabChange('security-logs')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'security-logs' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
               }`}
@@ -135,7 +184,7 @@ export default function Security() {
               Security Logs
             </button>
             <button
-              onClick={() => setActiveTab('visitor-logs')}
+              onClick={() => handleTabChange('visitor-logs')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'visitor-logs' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
               }`}
@@ -148,14 +197,22 @@ export default function Security() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search..." 
-              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm w-64 outline-none"
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search IP, reason, user..." 
+              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm w-full sm:w-64 outline-none"
             />
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="overflow-x-auto min-h-[500px]">
+        <div className="overflow-x-auto min-h-[450px] relative">
+          {loading && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           {activeTab === 'blocked-ips' && (
             <table className="w-full text-left">
               <thead className="bg-slate-100/50 text-slate-500 text-sm font-medium">
@@ -323,6 +380,84 @@ export default function Security() {
             </table>
           )}
         </div>
+
+        {/* Pagination Footer Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-200 bg-white/90">
+          {/* Left: Showing Range */}
+          <div className="text-sm text-slate-500 font-medium">
+            Showing <span className="font-semibold text-slate-800">{startItem}</span> to{' '}
+            <span className="font-semibold text-slate-800">{endItem}</span> of{' '}
+            <span className="font-semibold text-slate-800">{currentTotal}</span> entries
+          </div>
+
+          {/* Middle: Rows Per Page Selector */}
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span>Rows per page:</span>
+            <select
+              value={limit}
+              onChange={handleLimitChange}
+              className="px-2.5 py-1 border border-slate-200 rounded-lg text-sm bg-slate-50 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
+          {/* Right: Page Navigation Controls */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              title="First Page"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              title="Previous Page"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1 px-1">
+              {getPageNumbers().map((pNum) => (
+                <button
+                  key={pNum}
+                  onClick={() => setPage(pNum)}
+                  className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
+                    page === pNum
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                      : 'text-slate-600 hover:bg-slate-100 border border-transparent'
+                  }`}
+                >
+                  {pNum}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              title="Next Page"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              title="Last Page"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Manual Block Modal */}
@@ -444,3 +579,4 @@ export default function Security() {
     </div>
   );
 }
+
