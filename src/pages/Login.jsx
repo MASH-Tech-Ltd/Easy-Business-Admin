@@ -96,10 +96,21 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="dark-glass rounded-3xl p-8 shadow-2xl border border-slate-700/50">
-          <div className="flex flex-col items-center mb-8">
-            <img src="/MEasy.png" alt="MASH ECO SuperAdmin" className="w-24 h-24 object-contain mb-2" />
-            <h2 className="text-3xl font-bold text-white text-center">MASH ECO SuperAdmin</h2>
-            <p className="text-slate-400 mt-2 text-center text-sm">
+          <div className="flex flex-col items-center mb-10">
+            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 mb-5 shadow-inner backdrop-blur-sm relative group">
+              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <img src="/MEasy.png" alt="MASH ECO Logo" className="w-16 h-16 object-contain drop-shadow-xl relative z-10" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-center mb-3">
+              <span className="text-[#3b82f6]">MASH ECO</span>
+              <span className="text-white ml-2 font-bold">Super Admin</span>
+            </h2>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px w-8 bg-slate-700"></div>
+              <div className="h-1 w-1.5 bg-blue-500 rounded-full"></div>
+              <div className="h-px w-8 bg-slate-700"></div>
+            </div>
+            <p className="text-slate-400 text-center text-sm font-medium tracking-wide">
               {is2FARequired ? 'Two-Factor Verification' : 'Secure platform management'}
             </p>
           </div>
