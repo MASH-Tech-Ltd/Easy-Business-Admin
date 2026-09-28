@@ -375,6 +375,7 @@ export default function Security() {
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Context Info</th>
                   <th className="px-6 py-4">IP Address</th>
+                  <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Browser Details</th>
                   <th className="px-6 py-4">Time</th>
                 </tr>
@@ -400,6 +401,9 @@ export default function Security() {
                     <td className="px-6 py-4">
                       <span className="font-mono text-sm font-medium text-slate-700">{log.ipAddress}</span>
                     </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{log.location || 'Unknown'}</span>
+                    </td>
                     <td className="px-6 py-4 max-w-[250px]">
                       <p className="text-xs text-slate-500 truncate" title={log.userAgent}>{log.userAgent}</p>
                     </td>
@@ -410,7 +414,7 @@ export default function Security() {
                 ))}
                 {visitorLogs.length === 0 && !loading && (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500">No visitor logs found.</td>
+                    <td colSpan="6" className="px-6 py-12 text-center text-slate-500">No visitor logs found.</td>
                   </tr>
                 )}
               </tbody>
