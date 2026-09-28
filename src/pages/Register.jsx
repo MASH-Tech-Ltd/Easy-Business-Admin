@@ -34,11 +34,16 @@ export default function Register() {
       <div className="w-full max-w-md relative z-10">
         <div className="dark-glass rounded-3xl p-8 shadow-2xl border border-slate-700/50">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center mb-4 transform -rotate-6 hover:rotate-0 transition-transform">
-              <ShieldCheck className="w-8 h-8 text-white" />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src="/masheco-logo.png" alt="MASH ECO Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-xl relative z-10" />
+              <span className="text-3xl md:text-4xl font-righteous text-white tracking-tight">
+                MASH ECO
+              </span>
             </div>
-            <h2 className="text-3xl font-bold text-white text-center">Setup Admin</h2>
-            <p className="text-slate-400 mt-2 text-center text-sm">Register your SuperAdmin account</p>
+            <h2 className="text-xl font-bold text-blue-400 mb-2 tracking-wide uppercase">
+              Setup Admin
+            </h2>
+            <p className="text-slate-400 text-center text-sm">Register your SuperAdmin account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

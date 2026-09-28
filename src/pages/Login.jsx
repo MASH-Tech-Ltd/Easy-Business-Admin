@@ -97,13 +97,14 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         <div className="dark-glass rounded-3xl p-8 shadow-2xl border border-slate-700/50">
           <div className="flex flex-col items-center mb-10">
-            <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 mb-5 shadow-inner backdrop-blur-sm relative group">
-              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              <img src="/MEasy.png" alt="MASH ECO Logo" className="w-16 h-16 object-contain drop-shadow-xl relative z-10" />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src="/masheco-logo.png" alt="MASH ECO Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-xl relative z-10" />
+              <span className="text-3xl md:text-4xl font-righteous text-white tracking-tight">
+                MASH ECO
+              </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-center mb-3">
-              <span className="text-[#3b82f6]">MASH ECO</span>
-              <span className="text-white ml-2 font-bold">Super Admin</span>
+            <h2 className="text-xl font-bold text-blue-400 mb-3 tracking-wide uppercase">
+              Super Admin
             </h2>
             <div className="flex items-center gap-2 mb-2">
               <div className="h-px w-8 bg-slate-700"></div>

@@ -217,23 +217,21 @@ export default function Sidebar() {
 
   return (
     <aside className="w-[260px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden">
-      <div className="h-16 flex items-center px-6 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-lg overflow-hidden">
-            <img
-              src="/MEasy.png"
-              alt="MASH ECO"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-tight">
-              {import.meta.env.VITE_PLATFORM_NAME || "Platform"}
-            </h1>
-            <span className="text-xs font-medium text-slate-500">
-              SuperAdmin
-            </span>
-          </div>
+      <div className="h-16 flex flex-col justify-center px-6 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <img
+            src="/masheco-logo.png"
+            alt="MASH ECO"
+            className="w-8 h-8 object-contain"
+          />
+          <h1 className="text-2xl font-righteous text-slate-800 tracking-tight leading-none">
+            MASH ECO
+          </h1>
+        </div>
+        <div className="pl-10 -mt-0.5">
+          <span className="text-[9px] font-bold text-blue-400 tracking-[0.25em] uppercase leading-none">
+            SUPER ADMIN
+          </span>
         </div>
       </div>
 

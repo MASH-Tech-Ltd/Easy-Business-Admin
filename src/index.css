@@ -7,6 +7,7 @@
   --color-dark-surface: #1e293b;
   --color-light: #f8fafc;
   --font-sans: 'Inter', system-ui, sans-serif;
+  --font-righteous: 'Righteous', display;
 }
 
 body {
