@@ -7,6 +7,7 @@ export default function CourierCredentials() {
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showTokens, setShowTokens] = useState({});
+  const [syncReport, setSyncReport] = useState(null);
 
   const fetchCredentials = async () => {
     setLoading(true);
@@ -39,9 +40,35 @@ export default function CourierCredentials() {
           </h2>
           <p className="text-gray-500 mt-1 text-sm">Monitor connected courier APIs for all merchant stores. Tokens are decrypted for admin view.</p>
         </div>
-        <button onClick={fetchCredentials} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-          <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={async () => {
+              const toastId = toast.loading('Syncing statuses globally...');
+              try {
+                const res = await api.post('/courier/sync-status');
+                if (res.data?.success) {
+                  const data = res.data.data;
+                  toast.success(`Sync complete! ${data.updated} updated.`, { id: toastId });
+                  if (data.details && data.details.length > 0) {
+                    setSyncReport(data.details);
+                  } else {
+                    toast.info('No orders needed updating.');
+                  }
+                } else {
+                  toast.error('Sync failed', { id: toastId });
+                }
+              } catch (err) {
+                toast.error('Failed to sync', { id: toastId });
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" /> Global Sync
+          </button>
+          <button onClick={fetchCredentials} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors tooltip" title="Refresh Credentials">
+            <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -106,6 +133,54 @@ export default function CourierCredentials() {
           </div>
         )}
       </div>
+
+      {syncReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900">Global Sync Report</h3>
+              <button onClick={() => setSyncReport(null)} className="text-gray-400 hover:text-gray-600">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-gray-500 mb-4">Successfully updated {syncReport.length} orders across the platform.</p>
+              <div className="overflow-x-auto border border-gray-100 rounded-lg">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3">Store ID</th>
+                      <th className="px-4 py-3">Provider</th>
+                      <th className="px-4 py-3">Order ID</th>
+                      <th className="px-4 py-3">Previous Status</th>
+                      <th className="px-4 py-3">New Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {syncReport.map((rep, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-600">{rep.tenantId}</td>
+                        <td className="px-4 py-3 capitalize font-semibold text-gray-700">{rep.provider}</td>
+                        <td className="px-4 py-3 font-mono text-blue-600">#{rep.orderId}</td>
+                        <td className="px-4 py-3 capitalize text-gray-500">{rep.oldStatus}</td>
+                        <td className="px-4 py-3 capitalize font-bold text-green-600">{rep.newStatus}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button 
+                onClick={() => setSyncReport(null)}
+                className="bg-gray-900 text-white px-5 py-2 rounded-lg font-medium hover:bg-gray-800"
+              >
+                Close Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
