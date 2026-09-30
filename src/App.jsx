@@ -17,6 +17,7 @@ const Security = lazy(() => import("./pages/Security"));
 const Users = lazy(() => import("./pages/Users"));
 const FraudChecks = lazy(() => import("./pages/FraudChecks"));
 const CourierCredentials = lazy(() => import("./pages/CourierCredentials"));
+const CourierSync = lazy(() => import("./pages/CourierSync"));
 const Addons = lazy(() => import("./pages/Addons"));
 const CustomerIntelligence = lazy(() => import("./pages/CustomerIntelligence"));
 const SupportList = lazy(() => import("./pages/SupportList"));
@@ -60,7 +61,7 @@ function App() {
             <Route path="fraud-checks" element={<FraudChecks />} />
             <Route path="intelligence" element={<CustomerIntelligence />} />
             <Route path="addons" element={<Addons />} />
-            <Route path="courier-credentials" element={<CourierCredentials />} />
+            <Route path="courier-sync" element={<CourierSync />} />
             <Route path="support" element={<SupportList />} />
             <Route path="support/:id" element={<SupportDetails />} />
             <Route path="contact-inquiries" element={<ContactInquiries />} />

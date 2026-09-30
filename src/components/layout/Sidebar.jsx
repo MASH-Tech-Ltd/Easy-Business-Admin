@@ -20,7 +20,9 @@ import {
   ChevronRight,
   Search,
   MessageSquare,
+  Truck,
 } from "lucide-react";
+
 
 const Badge = ({ children, type = "NEW" }) => (
   <span
@@ -202,6 +204,12 @@ export default function Sidebar() {
           path: "/contact-inquiries",
           icon: MessageSquare,
         },
+      ],
+    },
+    {
+      title: "Courier",
+      items: [
+        { name: "Sync Center", path: "/courier-sync", icon: Truck },
       ],
     },
     {
