@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import { 
@@ -11,7 +11,14 @@ import {
   Check, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Zap,
+  AlertTriangle,
+  Trash2,
+  PauseCircle,
+  PlusCircle,
+  TrendingUp,
+  ShieldAlert
 } from 'lucide-react';
 import { useGetAddonRequestsQuery } from '../store/apiSlice';
 import { useSocket } from '../context/SocketContext';
@@ -26,6 +33,30 @@ export default function AddonRequests() {
   const [actionLoading, setActionLoading] = useState(null);
   const { socket } = useSocket();
 
+  // Custom Modal States
+  const [extendModal, setExtendModal] = useState({
+    isOpen: false,
+    subscriptionId: '',
+    addonId: '',
+    storeName: '',
+    addonName: '',
+    currentLimit: 0,
+    extraLimit: 50
+  });
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    actionType: '', // 'terminate' | 'delete' | 'deactivate'
+    subscriptionId: '',
+    addonId: '',
+    storeName: '',
+    addonName: '',
+    title: '',
+    description: '',
+    confirmText: 'Confirm',
+    theme: 'purple' // 'red' | 'orange' | 'purple'
+  });
+
   const { data: requestsRes, isLoading: loading, refetch: fetchRequests } = useGetAddonRequestsQuery({
     search: debouncedSearch,
     status: filterStatus,
@@ -36,7 +67,7 @@ export default function AddonRequests() {
 
   const requests = requestsRes?.data?.data || requestsRes?.data || [];
   const meta = requestsRes?.data?.meta || { total: 0, totalPages: 1, limit: 10 };
-  const stats = requestsRes?.data?.stats || { totalActive: 0, totalPending: 0, totalRejected: 0, totalRevenue: 0 };
+  const stats = requestsRes?.data?.stats || { totalActive: 0, totalPending: 0, totalInactive: 0, totalTerminated: 0, totalRejected: 0, totalRevenue: 0 };
 
   // Listen for real-time socket updates
   useEffect(() => {
@@ -56,7 +87,7 @@ export default function AddonRequests() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput);
-      setPage(1); // Reset to page 1 on new search
+      setPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -74,7 +105,7 @@ export default function AddonRequests() {
           terminate: 'terminated',
           reject: 'rejected'
         };
-        toast.success(`Add-on request ${actionLabels[action] || action} successfully`);
+        toast.success(`Add-on ${actionLabels[action] || action} successfully`);
         fetchRequests();
       }
     } catch (error) {
@@ -84,29 +115,99 @@ export default function AddonRequests() {
     }
   };
 
-  const handleExtendLimit = (subscriptionId, addonId, currentLimit = 0) => {
-    const amountStr = window.prompt(`Enter additional usage limit to add (Current limit: ${currentLimit}):`, '50');
-    if (!amountStr) return;
-    const extraLimit = parseInt(amountStr, 10);
-    if (isNaN(extraLimit) || extraLimit <= 0) {
-      toast.error('Please enter a valid positive number');
-      return;
-    }
-    handleAction(subscriptionId, addonId, 'extend', { extraLimit });
-  };
-
   const handleDelete = async (subscriptionId, addonId) => {
     try {
       setActionLoading(`${subscriptionId}-${addonId}-delete`);
       const res = await api.delete(`/subscriptions/addons/${subscriptionId}/${addonId}`);
       if (res.data?.success || res.data?.status === 'ok') {
-        toast.success(`Add-on record deleted successfully`);
+        toast.success(`Add-on record deleted permanently`);
         fetchRequests();
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || `Failed to delete add-on`);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Trigger Extend Limit Modal
+  const openExtendModal = (req) => {
+    setExtendModal({
+      isOpen: true,
+      subscriptionId: req.subscriptionId,
+      addonId: req.addonId,
+      storeName: req.tenant?.name || 'Store',
+      addonName: req.addonDetails?.name || 'Add-on',
+      currentLimit: req.limit || 0,
+      extraLimit: 50
+    });
+  };
+
+  const submitExtendModal = () => {
+    const amount = Number(extendModal.extraLimit);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid positive number');
+      return;
+    }
+    handleAction(extendModal.subscriptionId, extendModal.addonId, 'extend', { extraLimit: amount });
+    setExtendModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Trigger Confirmation Modal
+  const openConfirmModal = (actionType, req) => {
+    const storeName = req.tenant?.name || 'Store';
+    const addonName = req.addonDetails?.name || 'Add-on';
+
+    if (actionType === 'terminate') {
+      setConfirmModal({
+        isOpen: true,
+        actionType: 'terminate',
+        subscriptionId: req.subscriptionId,
+        addonId: req.addonId,
+        storeName,
+        addonName,
+        title: 'Terminate Add-on Subscription',
+        description: `Are you sure you want to terminate "${addonName}" for ${storeName}? The feature will be disabled for the merchant. All previously collected money remains in your dashboard revenue statistics.`,
+        confirmText: 'Yes, Terminate Add-on',
+        theme: 'red'
+      });
+    } else if (actionType === 'deactivate') {
+      setConfirmModal({
+        isOpen: true,
+        actionType: 'deactivate',
+        subscriptionId: req.subscriptionId,
+        addonId: req.addonId,
+        storeName,
+        addonName,
+        title: 'Place Add-on on Hold',
+        description: `Are you sure you want to place "${addonName}" on hold for ${storeName}? Usage will be temporarily paused until reactivated. Revenue remains credited.`,
+        confirmText: 'Yes, Put on Hold',
+        theme: 'orange'
+      });
+    } else if (actionType === 'delete') {
+      setConfirmModal({
+        isOpen: true,
+        actionType: 'delete',
+        subscriptionId: req.subscriptionId,
+        addonId: req.addonId,
+        storeName,
+        addonName,
+        title: 'Delete Add-on Record',
+        description: `Are you sure you want to permanently delete this add-on record for ${storeName}? This action cannot be undone.`,
+        confirmText: 'Permanently Delete',
+        theme: 'dark-red'
+      });
+    }
+  };
+
+  const submitConfirmModal = () => {
+    const { actionType, subscriptionId, addonId } = confirmModal;
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
+    if (actionType === 'delete') {
+      handleDelete(subscriptionId, addonId);
+    } else {
+      handleAction(subscriptionId, addonId, actionType);
     }
   };
 
@@ -119,6 +220,7 @@ export default function AddonRequests() {
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
@@ -139,7 +241,7 @@ export default function AddonRequests() {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-600 text-sm">On Hold / Inactive</h3>
-            <Clock className="w-5 h-5 text-orange-500" />
+            <PauseCircle className="w-5 h-5 text-orange-500" />
           </div>
           <p className="text-3xl font-bold text-slate-800">{stats.totalInactive || 0}</p>
         </div>
@@ -164,6 +266,7 @@ export default function AddonRequests() {
         </div>
       </div>
 
+      {/* Main Table Container */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between bg-slate-50 gap-4">
           <h3 className="font-bold text-slate-800 text-lg whitespace-nowrap">Store Add-ons List</h3>
@@ -270,7 +373,7 @@ export default function AddonRequests() {
                       >
                         {req.status === 'pending' && <Clock className="w-3 h-3" />}
                         {req.status === 'active' && <Check className="w-3 h-3" />}
-                        {req.status === 'inactive' && <Clock className="w-3 h-3" />}
+                        {req.status === 'inactive' && <PauseCircle className="w-3 h-3" />}
                         {req.status === 'terminated' && <X className="w-3 h-3" />}
                         {req.status === 'rejected' && <X className="w-3 h-3" />}
                         {req.status === 'inactive' ? 'On Hold' : req.status.charAt(0).toUpperCase() + req.status.slice(1)}
@@ -305,32 +408,28 @@ export default function AddonRequests() {
                         {req.status === 'active' && (
                           <>
                             <button
-                              onClick={() => handleAction(req.subscriptionId, req.addonId, 'deactivate')}
+                              onClick={() => openConfirmModal('deactivate', req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-deactivate`}
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Put on Hold / Deactivate (Money is preserved)"
                             >
-                              Hold
+                              <PauseCircle className="w-3 h-3" /> Hold
                             </button>
                             <button
-                              onClick={() => handleExtendLimit(req.subscriptionId, req.addonId, req.limit)}
+                              onClick={() => openExtendModal(req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-extend`}
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Add Extra Usage Limit"
                             >
-                              + Extend Limit
+                              <PlusCircle className="w-3 h-3" /> Extend Limit
                             </button>
                             <button
-                              onClick={() => {
-                                if (window.confirm('Are you sure you want to terminate this add-on? Money collected will remain in your dashboard stats.')) {
-                                  handleAction(req.subscriptionId, req.addonId, 'terminate');
-                                }
-                              }}
+                              onClick={() => openConfirmModal('terminate', req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-terminate`}
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Terminate Add-on"
                             >
-                              Terminate
+                              <XCircle className="w-3 h-3" /> Terminate
                             </button>
                           </>
                         )}
@@ -346,20 +445,20 @@ export default function AddonRequests() {
                               <Check className="w-3 h-3" /> Re-activate
                             </button>
                             <button
-                              onClick={() => handleExtendLimit(req.subscriptionId, req.addonId, req.limit)}
+                              onClick={() => openExtendModal(req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-extend`}
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Add Extra Usage Limit"
                             >
-                              + Extend Limit
+                              <PlusCircle className="w-3 h-3" /> Extend Limit
                             </button>
                             <button
-                              onClick={() => handleAction(req.subscriptionId, req.addonId, 'terminate')}
+                              onClick={() => openConfirmModal('terminate', req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-terminate`}
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Terminate Add-on"
                             >
-                              Terminate
+                              <XCircle className="w-3 h-3" /> Terminate
                             </button>
                           </>
                         )}
@@ -372,19 +471,15 @@ export default function AddonRequests() {
                               className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Re-approve Add-on"
                             >
-                              Re-approve
+                              <Check className="w-3 h-3" /> Re-approve
                             </button>
                             <button
-                              onClick={() => {
-                                if (window.confirm('Delete this add-on record permanently?')) {
-                                  handleDelete(req.subscriptionId, req.addonId);
-                                }
-                              }}
+                              onClick={() => openConfirmModal('delete', req)}
                               disabled={actionLoading === `${req.subscriptionId}-${req.addonId}-delete`}
-                              className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-50 text-xs font-semibold"
+                              className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
                               title="Delete Record"
                             >
-                              Delete
+                              <Trash2 className="w-3 h-3" /> Delete
                             </button>
                           </>
                         )}
@@ -433,6 +528,143 @@ export default function AddonRequests() {
           </div>
         )}
       </div>
+
+      {/* Modern Extend Limit Modal */}
+      {extendModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-100 shadow-2xl overflow-hidden p-6 space-y-5 transform transition-all scale-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-[#5022C3]">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-lg">Extend Add-on Limit</h3>
+                  <p className="text-xs text-slate-500">{extendModal.storeName} — {extendModal.addonName}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setExtendModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Additional Usage Limit
+                </label>
+                <input 
+                  type="number"
+                  min="1"
+                  value={extendModal.extraLimit}
+                  onChange={(e) => setExtendModal(prev => ({ ...prev, extraLimit: e.target.value }))}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold text-lg focus:outline-none focus:ring-2 focus:ring-[#5022C3] focus:bg-white transition-all"
+                  placeholder="Enter extra limit..."
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div>
+                <span className="text-xs text-slate-500 font-medium mb-1.5 block">Quick Increments:</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {[25, 50, 100, 500].map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setExtendModal(prev => ({ ...prev, extraLimit: val }))}
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all border ${Number(extendModal.extraLimit) === val ? 'bg-[#5022C3] text-white border-[#5022C3]' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                    >
+                      +{val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Calculation Preview */}
+              <div className="bg-purple-50/60 rounded-xl p-3.5 border border-purple-100 text-xs text-purple-900 flex justify-between items-center">
+                <span>New Total Limit:</span>
+                <span className="font-bold text-sm text-[#5022C3]">
+                  {extendModal.currentLimit} + {Number(extendModal.extraLimit) || 0} = {extendModal.currentLimit + (Number(extendModal.extraLimit) || 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setExtendModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitExtendModal}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-[#5022C3] hover:bg-[#401a9b] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" /> Save Extension
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Confirmation Dialog Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-100 shadow-2xl overflow-hidden p-6 space-y-5 transform transition-all scale-100">
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                confirmModal.theme === 'red' ? 'bg-red-100 text-red-600' :
+                confirmModal.theme === 'dark-red' ? 'bg-rose-100 text-rose-700' :
+                'bg-orange-100 text-orange-600'
+              }`}>
+                {confirmModal.theme === 'red' ? <ShieldAlert className="w-6 h-6" /> :
+                 confirmModal.theme === 'dark-red' ? <Trash2 className="w-6 h-6" /> :
+                 <PauseCircle className="w-6 h-6" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-900 text-lg leading-snug">{confirmModal.title}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{confirmModal.storeName} — {confirmModal.addonName}</p>
+              </div>
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-600 leading-relaxed">
+              {confirmModal.description}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitConfirmModal}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 ${
+                  confirmModal.theme === 'red' ? 'bg-red-600 hover:bg-red-700' :
+                  confirmModal.theme === 'dark-red' ? 'bg-rose-700 hover:bg-rose-800' :
+                  'bg-orange-500 hover:bg-orange-600'
+                }`}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
