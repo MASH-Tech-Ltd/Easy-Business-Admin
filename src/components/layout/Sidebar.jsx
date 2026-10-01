@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
+import api from "../../utils/api";
 import {
   LayoutDashboard,
   Package,
@@ -120,7 +121,6 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     try {
-      const { default: api } = await import("../../utils/api");
       await api.post("/auth/logout");
     } catch (err) {
       console.error("Logout error", err);
@@ -134,7 +134,6 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const { default: api } = await import("../../utils/api");
         const res = await api.get("/support/all-tickets");
         const openTickets = res.data.data.filter(
           (t) => t.status === "OPEN" || t.status === "PENDING",

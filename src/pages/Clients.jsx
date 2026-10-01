@@ -1,4 +1,4 @@
-﻿import { io } from "socket.io-client";
+import { io } from "socket.io-client";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
@@ -319,11 +319,11 @@ export default function Clients() {
                       <img
                         src={client.ownerId.avatar.secure_url}
                         alt={client.name}
-                        className="w-10 h-10 rounded-lg object-cover shadow-sm border border-slate-200"
+                        className="w-10 h-10 min-w-[40px] min-h-[40px] aspect-square shrink-0 rounded-xl object-cover shadow-sm border border-slate-200"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                        {client.name.charAt(0)}
+                      <div className="w-10 h-10 min-w-[40px] min-h-[40px] aspect-square shrink-0 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shadow-sm border border-blue-200/50">
+                        {client.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div>
@@ -817,11 +817,11 @@ export default function Clients() {
                           <img
                             src={activeClient.ownerId.avatar.secure_url}
                             alt={activeClient.ownerId.name}
-                            className="w-14 h-14 rounded-xl object-cover shadow-sm border border-slate-200"
+                            className="w-14 h-14 min-w-[56px] min-h-[56px] aspect-square shrink-0 rounded-xl object-cover shadow-sm border border-slate-200"
                           />
                         ) : (
-                          <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm border border-purple-200/50">
-                            {activeClient.ownerId.name?.charAt(0) || "?"}
+                          <div className="w-14 h-14 min-w-[56px] min-h-[56px] aspect-square shrink-0 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm border border-purple-200/50">
+                            {activeClient.ownerId.name?.charAt(0)?.toUpperCase() || "?"}
                           </div>
                         )}
                         <div>
