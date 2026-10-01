@@ -12,6 +12,9 @@ import {
   Search,
   Filter,
   AlertCircle,
+  Wallet,
+  RefreshCw,
+  Eye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
@@ -24,6 +27,7 @@ import {
 import React from "react";
 
 const Billing = () => {
+  const [activeTab, setActiveTab] = useState("subscriptions"); // 'subscriptions' | 'paymentSubmissions'
   const [actionLoading, setActionLoading] = useState(null);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -39,6 +43,55 @@ const Billing = () => {
     endDate: "",
     status: "",
   });
+
+  // Manual payment submissions state
+  const [paymentSubmissions, setPaymentSubmissions] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [verifyModalItem, setVerifyModalItem] = useState(null);
+  const [verifyStatusAction, setVerifyStatusAction] = useState("approved");
+  const [adminFeedback, setAdminFeedback] = useState("");
+
+  const fetchPaymentSubmissions = async () => {
+    try {
+      setLoadingPayments(true);
+      const res = await api.get("/billing/all-payments");
+      if (res.data?.data) {
+        setPaymentSubmissions(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load payment submissions", err);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPaymentSubmissions();
+  }, []);
+
+  const handleVerifySubmission = async (e) => {
+    e.preventDefault();
+    if (!verifyModalItem) return;
+    setActionLoading(verifyModalItem._id);
+    try {
+      await api.put(`/billing/verify-payment/${verifyModalItem._id}`, {
+        status: verifyStatusAction,
+        adminFeedback,
+      });
+      toast.success(`Payment submission mark as ${verifyStatusAction}!`);
+      setVerifyModalItem(null);
+      setAdminFeedback("");
+      fetchPaymentSubmissions();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to verify submission");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const pendingPaymentsCount = paymentSubmissions.filter(
+    (p) => p.status === "pending"
+  ).length;
 
   // RTK Query Hooks
   const {

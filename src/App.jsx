@@ -23,6 +23,7 @@ const CustomerIntelligence = lazy(() => import("./pages/CustomerIntelligence"));
 const SupportList = lazy(() => import("./pages/SupportList"));
 const SupportDetails = lazy(() => import("./pages/SupportDetails"));
 const AddonRequests = lazy(() => import("./pages/AddonRequests"));
+const PaymentVerifications = lazy(() => import("./pages/PaymentVerifications"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -55,6 +56,7 @@ function App() {
             <Route path="health" element={<Health />} />
             <Route path="billing" element={<Billing />} />
             <Route path="addon-requests" element={<AddonRequests />} />
+            <Route path="payment-verifications" element={<PaymentVerifications />} />
             <Route path="logs" element={<Logs />} />
             <Route path="database" element={<Database />} />
             <Route path="security" element={<Security />} />

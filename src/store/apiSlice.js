@@ -58,7 +58,7 @@ export const adminApi = createApi({
   refetchOnMountOrArgChange: true,
   
   // Tag types are used to declare what entities are cached, so we can invalidate them if needed
-  tagTypes: ['DashboardStats', 'Billing', 'Clients', 'Users', 'SupportTickets'],
+  tagTypes: ['DashboardStats', 'Billing', 'Clients', 'Users', 'SupportTickets', 'Packages', 'Addons', 'AddonRequests', 'PaymentSubmissions', 'Database', 'Health', 'Security'],
   
   endpoints: (builder) => ({
     // Overview / Super Admin Stats
@@ -80,6 +80,13 @@ export const adminApi = createApi({
         params,
       }),
       providesTags: ['Billing'],
+    }),
+    getAllPaymentSubmissions: builder.query({
+      query: (params) => ({
+        url: '/billing/all-payments',
+        params,
+      }),
+      providesTags: ['PaymentSubmissions', 'Billing'],
     }),
     
     // Tenants / Clients
@@ -174,6 +181,7 @@ export const {
   useGetSuperAdminStatsQuery,
   useGetBillingOverviewQuery,
   useGetAllSubscriptionsQuery,
+  useGetAllPaymentSubmissionsQuery,
   useGetAllTenantsQuery,
   useGetAllUsersQuery,
   useGetAllTicketsQuery,

@@ -35,12 +35,11 @@ export default function Login() {
           throw new Error('Access denied. Super Admin privileges required.');
         }
         
-        // Access token is automatically set as HttpOnly cookie by backend
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
-        navigate('/');
+        window.location.href = '/';
       }
     } catch (error) {
       if (error.response?.data?.errors) {
@@ -79,7 +78,7 @@ export default function Login() {
           localStorage.setItem('user', JSON.stringify(user));
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
-        navigate('/');
+        window.location.href = '/';
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid 2FA code. Please try again.');

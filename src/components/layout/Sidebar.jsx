@@ -142,15 +142,17 @@ export default function Sidebar() {
   const [openTicketsCount, setOpenTicketsCount] = useState(0);
   const [pendingSubscriptionsCount, setPendingSubscriptionsCount] = useState(0);
   const [pendingAddonRequestsCount, setPendingAddonRequestsCount] = useState(0);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const { socket } = useSocket();
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [ticketsRes, subsRes, addonsRes] = await Promise.allSettled([
+        const [ticketsRes, subsRes, addonsRes, paymentsRes] = await Promise.allSettled([
           api.get("/support/all-tickets"),
           api.get("/subscriptions/get-all-subscriptions?status=pending"),
           api.get("/subscriptions/addons/requests?status=pending"),
+          api.get("/billing/all-payments"),
         ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
@@ -180,6 +182,11 @@ export default function Sidebar() {
               : dataArr.length;
           setPendingAddonRequestsCount(count);
         }
+
+        if (paymentsRes.status === "fulfilled" && paymentsRes.value.data?.data) {
+          const pending = paymentsRes.value.data.data.filter((p) => p.status === 'pending');
+          setPendingPaymentsCount(pending.length);
+        }
       } catch (err) {}
     };
 
@@ -198,6 +205,10 @@ export default function Sidebar() {
         setPendingSubscriptionsCount((prev) => Math.max(0, prev - 1));
       } else if (type === "TICKET_CREATED") {
         setOpenTicketsCount((prev) => prev + 1);
+      } else if (type === "PAYMENT_SUBMITTED") {
+        setPendingPaymentsCount((prev) => prev + 1);
+      } else if (type === "PAYMENT_VERIFIED" || type === "PAYMENT_REJECTED") {
+        setPendingPaymentsCount((prev) => Math.max(0, prev - 1));
       } else {
         fetchCounts();
       }
@@ -226,7 +237,7 @@ export default function Sidebar() {
     };
   }, [socket]);
 
-  const totalPendingBilling = pendingSubscriptionsCount + pendingAddonRequestsCount;
+  const totalPendingBilling = pendingSubscriptionsCount + pendingAddonRequestsCount + pendingPaymentsCount;
 
   const formatBadge = (count) => {
     if (!count || count <= 0) return undefined;
@@ -264,6 +275,11 @@ export default function Sidebar() {
               name: "Add-on Requests",
               path: "/addon-requests",
               badge: formatBadge(pendingAddonRequestsCount),
+            },
+            {
+              name: "Payment Proofs (TrxID)",
+              path: "/payment-verifications",
+              badge: formatBadge(pendingPaymentsCount),
             },
           ],
         },

@@ -180,7 +180,7 @@ export default function AddonRequests() {
         storeName,
         addonName,
         title: 'Place Add-on on Hold',
-        description: `Are you sure you want to place "${addonName}" on hold for ${storeName}? Usage will be temporarily paused until reactivated. Revenue remains credited.`,
+        description: `Are you sure you want to place "${addonName}" on hold for ${storeName}? Service will be temporarily paused until reactivated.`,
         confirmText: 'Yes, Put on Hold',
         theme: 'orange'
       });
@@ -212,56 +212,51 @@ export default function AddonRequests() {
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Add-on Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage tenant add-ons, lifecycle statuses, limits, and non-refundable revenue.</p>
-        </div>
+    <div className="space-y-8 w-full pb-10">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Add-on Management</h2>
+        <p className="text-slate-500 text-sm mt-1">Manage tenant add-ons, lifecycle statuses, limits, and non-refundable revenue.</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-600 text-sm">Active</h3>
-            <CheckCircle className="w-5 h-5 text-green-500" />
+      {/* Stats Cards - exact ratio matching Billing.jsx */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold text-slate-600">Active Add-ons</h3>
+            <CheckCircle className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-3xl font-bold text-slate-800">{stats.totalActive || 0}</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-600 text-sm">Pending</h3>
-            <Clock className="w-5 h-5 text-amber-500" />
-          </div>
-          <p className="text-3xl font-bold text-slate-800">{stats.totalPending || 0}</p>
+          <p className="text-4xl font-bold text-slate-800">{stats.totalActive || 0}</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-600 text-sm">On Hold / Inactive</h3>
+        <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Clock className="w-24 h-24 text-amber-500" />
+          </div>
+          <div className="flex justify-between mb-2 relative z-10">
+            <h3 className="font-semibold text-slate-600">Pending Requests</h3>
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-2"></div>
+          </div>
+          <p className="text-4xl font-bold text-slate-800 relative z-10">{stats.totalPending || 0}</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold text-slate-600">On Hold / Inactive</h3>
             <PauseCircle className="w-5 h-5 text-orange-500" />
           </div>
-          <p className="text-3xl font-bold text-slate-800">{stats.totalInactive || 0}</p>
+          <p className="text-4xl font-bold text-slate-800">{stats.totalInactive || 0}</p>
         </div>
-        
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-600 text-sm">Terminated / Rejected</h3>
-            <XCircle className="w-5 h-5 text-red-500" />
+
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold text-slate-600">Revenue (Total)</h3>
+            <span className="text-xl font-bold text-green-500">৳</span>
           </div>
-          <p className="text-3xl font-bold text-slate-800">{(stats.totalTerminated || 0) + (stats.totalRejected || 0)}</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between bg-gradient-to-br from-purple-50/50 to-white">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-slate-700 text-sm">Collected Revenue</h3>
-            <span className="w-5 h-5 text-[#5022C3] font-bold text-xl leading-none">৳</span>
-          </div>
-          <div>
-            <p className="text-2xl font-extrabold text-[#5022C3]">৳ {stats.totalRevenue?.toLocaleString() || '0'}</p>
-            <p className="text-[11px] text-slate-400 mt-1 font-medium">Non-refundable retained earnings</p>
+          <p className="text-3xl font-bold text-slate-800">
+            ৳{stats.totalRevenue?.toLocaleString() || '0'}
+          </p>
+          <div className="text-[11px] font-medium text-slate-500 mt-2 flex justify-between items-center">
+            <p>Retained earnings</p>
           </div>
         </div>
       </div>
