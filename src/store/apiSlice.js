@@ -1,20 +1,17 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { performRefreshToken } from '../utils/refreshTokenManager';
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
   credentials: 'include',
 });
 
-let isRefreshing = false;
-let refreshSubscribers = [];
+let isRefreshingRTK = false;
+let rtkQueue = [];
 
-const subscribeTokenRefresh = (cb) => {
-  refreshSubscribers.push(cb);
-};
-
-const onRefreshed = (err) => {
-  refreshSubscribers.forEach((cb) => cb(err));
-  refreshSubscribers = [];
+const processRTKQueue = (err) => {
+  rtkQueue.forEach((resolve) => resolve(err));
+  rtkQueue = [];
 };
 
 const baseQueryWithReauth = async (args, api, extraOptions) => {
@@ -25,30 +22,25 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     const isAuthEndpoint = url.includes('/auth/');
 
     if (!isAuthEndpoint) {
-      if (!isRefreshing) {
-        isRefreshing = true;
-
-        const refreshResult = await rawBaseQuery(
-          { url: '/auth/refresh-token', method: 'POST' },
-          api,
-          extraOptions
-        );
-
-        if (refreshResult.data) {
-          onRefreshed(null);
-          isRefreshing = false;
-          result = await rawBaseQuery(args, api, extraOptions);
-        } else {
-          onRefreshed(refreshResult.error);
-          isRefreshing = false;
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
-      } else {
+      if (isRefreshingRTK) {
         await new Promise((resolve) => {
-          subscribeTokenRefresh(() => resolve());
+          rtkQueue.push(resolve);
         });
+        return await rawBaseQuery(args, api, extraOptions);
+      }
+
+      isRefreshingRTK = true;
+
+      try {
+        await performRefreshToken();
+        processRTKQueue(null);
         result = await rawBaseQuery(args, api, extraOptions);
+      } catch (refreshErr) {
+        processRTKQueue(refreshErr);
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      } finally {
+        isRefreshingRTK = false;
       }
     }
   }

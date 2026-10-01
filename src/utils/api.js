@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { performRefreshToken } from './refreshTokenManager';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -7,17 +8,15 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Access tokens are handled automatically via HttpOnly cookies
-
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+const processQueue = (error) => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve();
     }
   });
   failedQueue = [];
@@ -37,24 +36,22 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !isAuthAction && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
+        return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => {
-          return api(originalRequest);
-        }).catch((err) => {
-          return Promise.reject(err);
-        });
+        })
+          .then(() => api(originalRequest))
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        await axios.post(`${API_URL}/auth/refresh-token`, {}, { withCredentials: true });
+        await performRefreshToken();
         processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
+        processQueue(refreshError);
         localStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);
