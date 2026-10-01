@@ -150,7 +150,7 @@ export default function Sidebar() {
         const [ticketsRes, subsRes, addonsRes] = await Promise.allSettled([
           api.get("/support/all-tickets"),
           api.get("/subscriptions/get-all-subscriptions?status=pending"),
-          api.get("/subscriptions/addon-requests?status=pending"),
+          api.get("/subscriptions/addons/requests?status=pending"),
         ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
@@ -185,18 +185,44 @@ export default function Sidebar() {
 
     fetchCounts();
 
-    if (!socket) return;
+    const handleNewNotification = (notification) => {
+      if (!notification) return;
+      const type = notification.type;
+      if (type === "ADDON_REQUESTED") {
+        setPendingAddonRequestsCount((prev) => prev + 1);
+      } else if (type === "ADDON_APPROVED" || type === "ADDON_REJECTED") {
+        setPendingAddonRequestsCount((prev) => Math.max(0, prev - 1));
+      } else if (type === "SUBSCRIPTION_REQUESTED" || type === "PACKAGE_REQUESTED") {
+        setPendingSubscriptionsCount((prev) => prev + 1);
+      } else if (type === "SUBSCRIPTION_APPROVED" || type === "SUBSCRIPTION_REJECTED") {
+        setPendingSubscriptionsCount((prev) => Math.max(0, prev - 1));
+      } else if (type === "TICKET_CREATED") {
+        setOpenTicketsCount((prev) => prev + 1);
+      } else {
+        fetchCounts();
+      }
+    };
 
+    const handleNewTicket = () => {
+      setOpenTicketsCount((prev) => prev + 1);
+    };
+
+    const handleNewSubscription = () => {
+      setPendingSubscriptionsCount((prev) => prev + 1);
+    };
+
+    socket.on("new_notification", handleNewNotification);
+    socket.on("new_ticket", handleNewTicket);
+    socket.on("new_subscription", handleNewSubscription);
     socket.on("refresh_tickets", fetchCounts);
     socket.on("refresh_subscriptions", fetchCounts);
-    socket.on("new_subscription", fetchCounts);
-    socket.on("new_notification", fetchCounts);
 
     return () => {
+      socket.off("new_notification", handleNewNotification);
+      socket.off("new_ticket", handleNewTicket);
+      socket.off("new_subscription", handleNewSubscription);
       socket.off("refresh_tickets", fetchCounts);
       socket.off("refresh_subscriptions", fetchCounts);
-      socket.off("new_subscription", fetchCounts);
-      socket.off("new_notification", fetchCounts);
     };
   }, [socket]);
 
