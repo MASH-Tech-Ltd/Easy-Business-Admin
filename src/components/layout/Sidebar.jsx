@@ -89,6 +89,11 @@ const SidebarItem = ({ item }) => {
                 }
               >
                 <span>{sub.name}</span>
+                {sub.badge && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded ml-auto bg-blue-600 text-white">
+                    {sub.badge}
+                  </span>
+                )}
               </NavLink>
             ))}
           </div>
@@ -135,15 +140,17 @@ export default function Sidebar() {
   };
 
   const [openTicketsCount, setOpenTicketsCount] = useState(0);
-  const [pendingBillingCount, setPendingBillingCount] = useState(0);
+  const [pendingSubscriptionsCount, setPendingSubscriptionsCount] = useState(0);
+  const [pendingAddonRequestsCount, setPendingAddonRequestsCount] = useState(0);
   const { socket } = useSocket();
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [ticketsRes, billingRes] = await Promise.allSettled([
+        const [ticketsRes, subsRes, addonsRes] = await Promise.allSettled([
           api.get("/support/all-tickets"),
           api.get("/subscriptions/get-all-subscriptions?status=pending"),
+          api.get("/subscriptions/addon-requests?status=pending"),
         ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
@@ -153,11 +160,24 @@ export default function Sidebar() {
           setOpenTicketsCount(openTickets.length);
         }
 
-        if (billingRes.status === "fulfilled" && billingRes.value.data) {
-          const metaTotal = billingRes.value.data.meta?.total;
-          const dataLength = billingRes.value.data.data?.length;
+        if (subsRes.status === "fulfilled" && subsRes.value.data) {
+          const metaTotal = subsRes.value.data.meta?.total;
+          const dataLength = subsRes.value.data.data?.length;
           const count = typeof metaTotal === "number" ? metaTotal : (dataLength || 0);
-          setPendingBillingCount(count);
+          setPendingSubscriptionsCount(count);
+        }
+
+        if (addonsRes.status === "fulfilled" && addonsRes.value.data) {
+          const statsPending = addonsRes.value.data.stats?.totalPending;
+          const metaTotal = addonsRes.value.data.meta?.total;
+          const dataLength = addonsRes.value.data.data?.length;
+          const count =
+            typeof statsPending === "number"
+              ? statsPending
+              : typeof metaTotal === "number"
+              ? metaTotal
+              : (dataLength || 0);
+          setPendingAddonRequestsCount(count);
         }
       } catch (err) {}
     };
@@ -169,13 +189,22 @@ export default function Sidebar() {
     socket.on("refresh_tickets", fetchCounts);
     socket.on("refresh_subscriptions", fetchCounts);
     socket.on("new_subscription", fetchCounts);
+    socket.on("new_notification", fetchCounts);
 
     return () => {
       socket.off("refresh_tickets", fetchCounts);
       socket.off("refresh_subscriptions", fetchCounts);
       socket.off("new_subscription", fetchCounts);
+      socket.off("new_notification", fetchCounts);
     };
   }, [socket]);
+
+  const totalPendingBilling = pendingSubscriptionsCount + pendingAddonRequestsCount;
+
+  const formatBadge = (count) => {
+    if (!count || count <= 0) return undefined;
+    return count > 99 ? "99+" : String(count);
+  };
 
   const navGroups = [
     {
@@ -197,17 +226,25 @@ export default function Sidebar() {
         {
           name: "Billing",
           icon: CreditCard,
-          badge: pendingBillingCount > 0 ? String(pendingBillingCount) : undefined,
+          badge: formatBadge(totalPendingBilling),
           subItems: [
-            { name: "Subscriptions", path: "/billing" },
-            { name: "Add-on Requests", path: "/addon-requests" },
+            {
+              name: "Subscriptions",
+              path: "/billing",
+              badge: formatBadge(pendingSubscriptionsCount),
+            },
+            {
+              name: "Add-on Requests",
+              path: "/addon-requests",
+              badge: formatBadge(pendingAddonRequestsCount),
+            },
           ],
         },
         {
           name: "Support",
           path: "/support",
           icon: LifeBuoy,
-          badge: openTicketsCount > 0 ? String(openTicketsCount) : undefined,
+          badge: formatBadge(openTicketsCount),
         },
         {
           name: "Contact Inquiries",
