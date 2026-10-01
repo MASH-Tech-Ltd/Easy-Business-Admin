@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { useSocket } from '../context/SocketContext';
 import api from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 export default function NotificationBell({ userId }) {
+  const { socket } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [socket, setSocket] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -28,16 +28,9 @@ export default function NotificationBell({ userId }) {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!socket || !userId) return;
 
-    const newSocket = io('/');
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      newSocket.emit('join_user_room', userId);
-    });
-
-    newSocket.on('new_notification', (notification) => {
+    const handleNotification = (notification) => {
       setNotifications(prev => [notification, ...prev]);
       toast(
         <div onClick={() => setIsOpen(true)} className="flex items-start gap-3 cursor-pointer">
@@ -66,13 +59,14 @@ export default function NotificationBell({ userId }) {
           }
         }
       );
-    });
+    };
+
+    socket.on('new_notification', handleNotification);
 
     return () => {
-      newSocket.emit('leave_user_room', userId);
-      newSocket.close();
+      socket.off('new_notification', handleNotification);
     };
-  }, [userId]);
+  }, [socket, userId]);
 
   const fetchNotifications = async () => {
     try {
@@ -119,11 +113,13 @@ export default function NotificationBell({ userId }) {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-500 hover:text-slate-700 transition-colors"
+        className="relative p-2 text-slate-500 hover:text-slate-700 transition-colors rounded-lg hover:bg-slate-100/50"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </button>
 

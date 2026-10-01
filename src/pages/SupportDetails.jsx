@@ -3,16 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { ArrowLeft, Send, CheckCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { io } from 'socket.io-client';
+import { useSocket } from '../context/SocketContext';
 
 export default function SupportDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { socket } = useSocket();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [replyMessage, setReplyMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [socket, setSocket] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState('');
   const typingTimeoutRef = useRef(null);
@@ -20,13 +20,6 @@ export default function SupportDetails() {
 
   useEffect(() => {
     fetchTicketDetails();
-
-    const newSocket = io('/');
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.close();
-    };
   }, [id]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { io } from "socket.io-client";
+import { useSocket } from "../context/SocketContext";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
@@ -46,30 +46,21 @@ export default function Packages() {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const openCreateModal = () => {
+  const { socket } = useSocket();
+
   useEffect(() => {
-    const adminUserStr = localStorage.getItem("user");
-    let socket;
-    if (adminUserStr) {
-      try {
-        socket = io("/");
-        const user = JSON.parse(adminUserStr);
-        socket.emit("join_user_room", user._id);
-        
-        socket.on("refresh_packages", () => {
-          // Trigger refetch depending on what RTK query or fetch is used
-          // We can use a simple state toggle to trigger re-renders or assume refetch() exists
-          if (typeof refetch === 'function') refetch();
-          if (typeof fetchData === 'function') fetchData();
-        });
-      } catch (err) {}
-    }
-    return () => {
-      if (socket) {
-        socket.off("refresh_packages");
-        socket.close();
-      }
+    if (!socket) return;
+
+    const handleRefresh = () => {
+      if (typeof refetch === 'function') refetch();
     };
-  }, []);
+
+    socket.on("refresh_packages", handleRefresh);
+
+    return () => {
+      socket.off("refresh_packages", handleRefresh);
+    };
+  }, [socket]);
 
     setEditId(null);
     setFormData({

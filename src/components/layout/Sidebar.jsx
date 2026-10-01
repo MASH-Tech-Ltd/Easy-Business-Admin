@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 import api from "../../utils/api";
 import {
   LayoutDashboard,
@@ -63,10 +63,15 @@ const SidebarItem = ({ item }) => {
             className={`w-4 h-4 mr-3 ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`}
           />
           <span>{item.name}</span>
+          {item.badge && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded ml-auto mr-1.5 bg-blue-600 text-white">
+              {item.badge}
+            </span>
+          )}
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 ml-auto text-slate-400" />
+            <ChevronDown className={`w-4 h-4 text-slate-400 ${!item.badge ? 'ml-auto' : ''}`} />
           ) : (
-            <ChevronRight className="w-4 h-4 ml-auto text-slate-400" />
+            <ChevronRight className={`w-4 h-4 text-slate-400 ${!item.badge ? 'ml-auto' : ''}`} />
           )}
         </button>
         {isExpanded && (
@@ -130,42 +135,47 @@ export default function Sidebar() {
   };
 
   const [openTicketsCount, setOpenTicketsCount] = useState(0);
+  const [pendingBillingCount, setPendingBillingCount] = useState(0);
+  const { socket } = useSocket();
 
   useEffect(() => {
-    const fetchCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await api.get("/support/all-tickets");
-        const openTickets = res.data.data.filter(
-          (t) => t.status === "OPEN" || t.status === "PENDING",
-        );
-        setOpenTicketsCount(openTickets.length);
+        const [ticketsRes, billingRes] = await Promise.allSettled([
+          api.get("/support/all-tickets"),
+          api.get("/subscriptions/get-all-subscriptions?status=pending"),
+        ]);
+
+        if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
+          const openTickets = ticketsRes.value.data.data.filter(
+            (t) => t.status === "OPEN" || t.status === "PENDING"
+          );
+          setOpenTicketsCount(openTickets.length);
+        }
+
+        if (billingRes.status === "fulfilled" && billingRes.value.data) {
+          const metaTotal = billingRes.value.data.meta?.total;
+          const dataLength = billingRes.value.data.data?.length;
+          const count = typeof metaTotal === "number" ? metaTotal : (dataLength || 0);
+          setPendingBillingCount(count);
+        }
       } catch (err) {}
     };
 
-    fetchCount();
+    fetchCounts();
 
-    const socket = io("/");
-    const adminUserStr = localStorage.getItem("user");
-    if (adminUserStr) {
-      try {
-        const user = JSON.parse(adminUserStr);
-        socket.emit("join_user_room", user._id);
-      } catch (err) {}
-    }
+    if (!socket) return;
 
-    socket.on("refresh_tickets", fetchCount);
+    socket.on("refresh_tickets", fetchCounts);
+    socket.on("refresh_subscriptions", fetchCounts);
+    socket.on("new_subscription", fetchCounts);
 
     return () => {
-      if (adminUserStr) {
-        try {
-          const user = JSON.parse(adminUserStr);
-          socket.emit("leave_user_room", user._id);
-        } catch (err) {}
-      }
-      socket.off("refresh_tickets");
-      socket.close();
+      socket.off("refresh_tickets", fetchCounts);
+      socket.off("refresh_subscriptions", fetchCounts);
+      socket.off("new_subscription", fetchCounts);
     };
-  }, []);
+  }, [socket]);
 
   const navGroups = [
     {
@@ -187,6 +197,7 @@ export default function Sidebar() {
         {
           name: "Billing",
           icon: CreditCard,
+          badge: pendingBillingCount > 0 ? String(pendingBillingCount) : undefined,
           subItems: [
             { name: "Subscriptions", path: "/billing" },
             { name: "Add-on Requests", path: "/addon-requests" },

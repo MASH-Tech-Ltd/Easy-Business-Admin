@@ -1,4 +1,4 @@
-import { io } from "socket.io-client";
+import { useSocket } from "../context/SocketContext";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
@@ -78,30 +78,21 @@ export default function Clients() {
   const [metricsStartDate, setMetricsStartDate] = useState("");
   const [metricsEndDate, setMetricsEndDate] = useState("");
 
+  const { socket } = useSocket();
+
   useEffect(() => {
-    const adminUserStr = localStorage.getItem("user");
-    let socket;
-    if (adminUserStr) {
-      try {
-        socket = io("/");
-        const user = JSON.parse(adminUserStr);
-        socket.emit("join_user_room", user._id);
-        
-        socket.on("refresh_tenants", () => {
-          // Trigger refetch depending on what RTK query or fetch is used
-          // We can use a simple state toggle to trigger re-renders or assume refetch() exists
-          if (typeof refetch === 'function') refetch();
-          if (typeof fetchData === 'function') fetchData();
-        });
-      } catch (err) {}
-    }
-    return () => {
-      if (socket) {
-        socket.off("refresh_tenants");
-        socket.close();
-      }
+    if (!socket) return;
+
+    const handleRefresh = () => {
+      if (typeof refetch === 'function') refetch();
     };
-  }, []);
+
+    socket.on("refresh_tenants", handleRefresh);
+
+    return () => {
+      socket.off("refresh_tenants", handleRefresh);
+    };
+  }, [socket]);
 
   const fetchClients = () => {
     refetch();

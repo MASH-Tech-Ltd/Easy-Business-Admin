@@ -1,11 +1,64 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
+  credentials: 'include',
+});
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (err) => {
+  refreshSubscribers.forEach((cb) => cb(err));
+  refreshSubscribers = [];
+};
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await rawBaseQuery(args, api, extraOptions);
+
+  if (result.error && result.error.status === 401) {
+    const url = typeof args === 'string' ? args : args?.url || '';
+    const isAuthEndpoint = url.includes('/auth/');
+
+    if (!isAuthEndpoint) {
+      if (!isRefreshing) {
+        isRefreshing = true;
+
+        const refreshResult = await rawBaseQuery(
+          { url: '/auth/refresh-token', method: 'POST' },
+          api,
+          extraOptions
+        );
+
+        if (refreshResult.data) {
+          onRefreshed(null);
+          isRefreshing = false;
+          result = await rawBaseQuery(args, api, extraOptions);
+        } else {
+          onRefreshed(refreshResult.error);
+          isRefreshing = false;
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+      } else {
+        await new Promise((resolve) => {
+          subscribeTokenRefresh(() => resolve());
+        });
+        result = await rawBaseQuery(args, api, extraOptions);
+      }
+    }
+  }
+
+  return result;
+};
+
 export const adminApi = createApi({
   reducerPath: 'adminApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
-    credentials: 'include',
-  }),
+  baseQuery: baseQueryWithReauth,
   // Enable automatic refetching when the user reconnects to the network
   // and when window regains focus.
   refetchOnFocus: true,

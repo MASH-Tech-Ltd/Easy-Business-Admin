@@ -18,7 +18,7 @@ import {
   useGetTicketStatsQuery,
 } from "../store/apiSlice";
 import toast from "react-hot-toast";
-import { io } from "socket.io-client";
+import { useSocket } from "../context/SocketContext";
 
 export default function SupportList() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,15 +72,10 @@ export default function SupportList() {
     };
   }, [searchQuery]);
 
+  const { socket } = useSocket();
+
   useEffect(() => {
-    const socket = io("/");
-    const adminUserStr = localStorage.getItem("user");
-    if (adminUserStr) {
-      try {
-        const user = JSON.parse(adminUserStr);
-        socket.emit("join_user_room", user._id);
-      } catch (err) {}
-    }
+    if (!socket) return;
 
     const triggerRefetch = () => {
       refetchTickets();
@@ -91,17 +86,10 @@ export default function SupportList() {
     socket.on("refresh_tickets", triggerRefetch);
 
     return () => {
-      if (adminUserStr) {
-        try {
-          const user = JSON.parse(adminUserStr);
-          socket.emit("leave_user_room", user._id);
-        } catch (err) {}
-      }
-      socket.off("new_ticket");
-      socket.off("refresh_tickets");
-      socket.close();
+      socket.off("new_ticket", triggerRefetch);
+      socket.off("refresh_tickets", triggerRefetch);
     };
-  }, []);
+  }, [socket]);
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { io } from "socket.io-client";
+import { useSocket } from "../context/SocketContext";
 import { toast } from "react-toastify";
 import api from "../utils/api";
 import {
@@ -81,25 +81,17 @@ const Billing = () => {
     refetchSubs();
   };
 
+  const { socket } = useSocket();
+
   useEffect(() => {
-    const adminUserStr = localStorage.getItem("user");
-    let socket;
-    if (adminUserStr) {
-      try {
-        socket = io("/");
-        const user = JSON.parse(adminUserStr);
-        socket.emit("join_user_room", user._id);
-        
-        socket.on("refresh_subscriptions", fetchData);
-      } catch (err) {}
-    }
+    if (!socket) return;
+
+    socket.on("refresh_subscriptions", fetchData);
+
     return () => {
-      if (socket) {
-        socket.off("refresh_subscriptions");
-        socket.close();
-      }
+      socket.off("refresh_subscriptions", fetchData);
     };
-  }, []);
+  }, [socket]);
 
   const handleApprove = async (id) => {
     setActionLoading(id);

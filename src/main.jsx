@@ -8,13 +8,17 @@ import { store } from './store/store';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import { SocketProvider } from './context/SocketContext';
+
 document.title = import.meta.env.VITE_PLATFORM_NAME || 'SuperAdmin Dashboard';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <SocketProvider>
+          <App />
+        </SocketProvider>
         <ToastContainer position="bottom-right" theme="colored" />
       </BrowserRouter>
     </Provider>
