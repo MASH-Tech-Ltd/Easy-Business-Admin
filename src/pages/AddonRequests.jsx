@@ -14,6 +14,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useGetAddonRequestsQuery } from '../store/apiSlice';
+import { useSocket } from '../context/SocketContext';
 
 export default function AddonRequests() {
   const [searchInput, setSearchInput] = useState('');
@@ -23,6 +24,7 @@ export default function AddonRequests() {
   
   const [page, setPage] = useState(1);
   const [actionLoading, setActionLoading] = useState(null);
+  const { socket } = useSocket();
 
   const { data: requestsRes, isLoading: loading, refetch: fetchRequests } = useGetAddonRequestsQuery({
     search: debouncedSearch,
@@ -35,6 +37,20 @@ export default function AddonRequests() {
   const requests = requestsRes?.data?.data || requestsRes?.data || [];
   const meta = requestsRes?.data?.meta || { total: 0, totalPages: 1, limit: 10 };
   const stats = requestsRes?.data?.stats || { totalActive: 0, totalPending: 0, totalRejected: 0, totalRevenue: 0 };
+
+  // Listen for real-time socket updates
+  useEffect(() => {
+    if (!socket) return;
+    const handleRefresh = () => fetchRequests();
+    socket.on('refresh_subscriptions', handleRefresh);
+    socket.on('new_subscription', handleRefresh);
+    socket.on('new_notification', handleRefresh);
+    return () => {
+      socket.off('refresh_subscriptions', handleRefresh);
+      socket.off('new_subscription', handleRefresh);
+      socket.off('new_notification', handleRefresh);
+    };
+  }, [socket, fetchRequests]);
 
   // Debounce search
   useEffect(() => {

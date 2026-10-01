@@ -168,15 +168,16 @@ export default function Sidebar() {
         }
 
         if (addonsRes.status === "fulfilled" && addonsRes.value.data) {
-          const statsPending = addonsRes.value.data.stats?.totalPending;
-          const metaTotal = addonsRes.value.data.meta?.total;
-          const dataLength = addonsRes.value.data.data?.length;
+          const resObj = addonsRes.value.data.data || addonsRes.value.data;
+          const statsPending = resObj?.stats?.totalPending;
+          const metaTotal = resObj?.meta?.total;
+          const dataArr = Array.isArray(resObj?.data) ? resObj.data : (Array.isArray(resObj) ? resObj : []);
           const count =
             typeof statsPending === "number"
               ? statsPending
               : typeof metaTotal === "number"
               ? metaTotal
-              : (dataLength || 0);
+              : dataArr.length;
           setPendingAddonRequestsCount(count);
         }
       } catch (err) {}
