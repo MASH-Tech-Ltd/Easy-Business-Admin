@@ -13,7 +13,7 @@ export default function RequireAuth({ children }) {
     if (userStr) user = JSON.parse(userStr);
   } catch (e) {}
 
-  const isExpired = sessTimeStr && (Date.now() - parseInt(sessTimeStr, 10) > SESSION_DURATION);
+  const isExpired = sessTimeStr ? (Date.now() - parseInt(sessTimeStr, 10) > SESSION_DURATION) : false;
 
   if (!user || user.role !== 'super_admin' || isExpired) {
     localStorage.removeItem('user');
@@ -23,7 +23,9 @@ export default function RequireAuth({ children }) {
   }
 
   if (!sessTimeStr && user && user.role === 'super_admin') {
-    setCookie('_admin_sess_time', Date.now().toString(), SESSION_HOURS);
+    const now = Date.now().toString();
+    setCookie('_admin_sess_time', now, SESSION_HOURS);
+    localStorage.setItem('adminLoginTime', now);
   }
 
   return children;

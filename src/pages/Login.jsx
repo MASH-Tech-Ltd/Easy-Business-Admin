@@ -60,6 +60,7 @@ export default function Login() {
         
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('adminLoginTime', Date.now().toString());
         }
         setCookie('_admin_sess_time', Date.now().toString(), SESSION_HOURS);
         if (accessToken) {
@@ -104,6 +105,7 @@ export default function Login() {
         }
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('adminLoginTime', Date.now().toString());
         }
         setCookie('_admin_sess_time', Date.now().toString(), SESSION_HOURS);
         if (accessToken) {
