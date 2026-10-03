@@ -15,6 +15,8 @@ import {
   X,
   PackageMinus,
   Sparkles,
+  Package,
+  Layers,
 } from "lucide-react";
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
@@ -48,6 +50,7 @@ export default function Clients() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
   const [isDeleteProductsModalOpen, setIsDeleteProductsModalOpen] =
     useState(false);
   const [isDeletingProducts, setIsDeletingProducts] = useState(false);
@@ -195,7 +198,9 @@ export default function Clients() {
   };
 
   const handleDeleteSubmit = async () => {
+    if (!activeClient?._id) return;
     try {
+      setIsDeletingClient(true);
       const res = await api.delete(
         `/tenants/delete-tenant/${activeClient._id}`,
       );
@@ -206,6 +211,8 @@ export default function Clients() {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete client");
+    } finally {
+      setIsDeletingClient(false);
     }
   };
 
@@ -293,6 +300,8 @@ export default function Clients() {
               <th className="px-6 py-4">Subdomain</th>
               <th className="px-6 py-4">Domain</th>
               <th className="px-6 py-4">Owner Email</th>
+              <th className="px-6 py-4 text-center">Products</th>
+              <th className="px-6 py-4 text-center">Categories</th>
               <th className="px-6 py-4">Package</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-right">Actions</th>
@@ -338,6 +347,18 @@ export default function Clients() {
                     <Shield className="w-4 h-4 text-emerald-500" />
                     {client.ownerId?.email || "N/A"}
                   </div>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/70 shadow-xs">
+                    <Package className="w-3.5 h-3.5 text-blue-500" />
+                    {client.totalProducts ?? 0}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/70 shadow-xs">
+                    <Layers className="w-3.5 h-3.5 text-purple-500" />
+                    {client.totalCategories ?? 0}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   {client.package ? (
@@ -1071,17 +1092,37 @@ export default function Clients() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium"
+                onClick={() => !isDeletingClient && setIsDeleteModalOpen(false)}
+                disabled={isDeletingClient}
+                className={`flex-1 px-4 py-2.5 rounded-xl transition-colors font-medium ${
+                  isDeletingClient
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                }`}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDeleteSubmit}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium shadow-lg shadow-red-500/30"
+                disabled={isDeletingClient}
+                className={`flex-1 px-4 py-2.5 rounded-xl transition-all font-medium shadow-lg flex items-center justify-center gap-2 ${
+                  isDeletingClient
+                    ? "bg-red-400 text-white cursor-wait shadow-red-500/20 opacity-90"
+                    : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/30"
+                }`}
               >
-                Delete Store & Data
+                {isDeletingClient ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete Store & Data</span>
+                )}
               </button>
             </div>
           </div>
