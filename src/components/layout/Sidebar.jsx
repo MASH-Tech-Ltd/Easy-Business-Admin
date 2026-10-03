@@ -24,7 +24,6 @@ import {
   Truck,
 } from "lucide-react";
 
-
 const Badge = ({ children, type = "NEW" }) => (
   <span
     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-auto ${
@@ -69,9 +68,13 @@ const SidebarItem = ({ item }) => {
             </span>
           )}
           {isExpanded ? (
-            <ChevronDown className={`w-4 h-4 text-slate-400 ${!item.badge ? 'ml-auto' : ''}`} />
+            <ChevronDown
+              className={`w-4 h-4 text-slate-400 ${!item.badge ? "ml-auto" : ""}`}
+            />
           ) : (
-            <ChevronRight className={`w-4 h-4 text-slate-400 ${!item.badge ? 'ml-auto' : ''}`} />
+            <ChevronRight
+              className={`w-4 h-4 text-slate-400 ${!item.badge ? "ml-auto" : ""}`}
+            />
           )}
         </button>
         {isExpanded && (
@@ -148,16 +151,17 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [ticketsRes, subsRes, addonsRes, paymentsRes] = await Promise.allSettled([
-          api.get("/support/all-tickets"),
-          api.get("/subscriptions/get-all-subscriptions?status=pending"),
-          api.get("/subscriptions/addons/requests?status=pending"),
-          api.get("/billing/all-payments"),
-        ]);
+        const [ticketsRes, subsRes, addonsRes, paymentsRes] =
+          await Promise.allSettled([
+            api.get("/support/all-tickets"),
+            api.get("/subscriptions/get-all-subscriptions?status=pending"),
+            api.get("/subscriptions/addons/requests?status=pending"),
+            api.get("/billing/all-payments?status=pending"),
+          ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
           const openTickets = ticketsRes.value.data.data.filter(
-            (t) => t.status === "OPEN" || t.status === "PENDING"
+            (t) => t.status === "OPEN" || t.status === "PENDING",
           );
           setOpenTicketsCount(openTickets.length);
         }
@@ -165,7 +169,8 @@ export default function Sidebar() {
         if (subsRes.status === "fulfilled" && subsRes.value.data) {
           const metaTotal = subsRes.value.data.meta?.total;
           const dataLength = subsRes.value.data.data?.length;
-          const count = typeof metaTotal === "number" ? metaTotal : (dataLength || 0);
+          const count =
+            typeof metaTotal === "number" ? metaTotal : dataLength || 0;
           setPendingSubscriptionsCount(count);
         }
 
@@ -173,19 +178,36 @@ export default function Sidebar() {
           const resObj = addonsRes.value.data.data || addonsRes.value.data;
           const statsPending = resObj?.stats?.totalPending;
           const metaTotal = resObj?.meta?.total;
-          const dataArr = Array.isArray(resObj?.data) ? resObj.data : (Array.isArray(resObj) ? resObj : []);
+          const dataArr = Array.isArray(resObj?.data)
+            ? resObj.data
+            : Array.isArray(resObj)
+              ? resObj
+              : [];
           const count =
             typeof statsPending === "number"
               ? statsPending
               : typeof metaTotal === "number"
-              ? metaTotal
-              : dataArr.length;
+                ? metaTotal
+                : dataArr.length;
           setPendingAddonRequestsCount(count);
         }
 
-        if (paymentsRes.status === "fulfilled" && paymentsRes.value.data?.data) {
-          const pending = paymentsRes.value.data.data.filter((p) => p.status === 'pending');
-          setPendingPaymentsCount(pending.length);
+        if (paymentsRes.status === "fulfilled" && paymentsRes.value.data) {
+          const resObj = paymentsRes.value.data.data || paymentsRes.value.data;
+          const statsPending = resObj?.stats?.pendingCount;
+          const metaTotal = resObj?.meta?.total;
+          const dataArr = Array.isArray(resObj?.data)
+            ? resObj.data
+            : Array.isArray(resObj)
+              ? resObj
+              : [];
+          const count =
+            typeof statsPending === "number"
+              ? statsPending
+              : typeof metaTotal === "number"
+                ? metaTotal
+                : dataArr.length;
+          setPendingPaymentsCount(count);
         }
       } catch (err) {}
     };
@@ -199,9 +221,15 @@ export default function Sidebar() {
         setPendingAddonRequestsCount((prev) => prev + 1);
       } else if (type === "ADDON_APPROVED" || type === "ADDON_REJECTED") {
         setPendingAddonRequestsCount((prev) => Math.max(0, prev - 1));
-      } else if (type === "SUBSCRIPTION_REQUESTED" || type === "PACKAGE_REQUESTED") {
+      } else if (
+        type === "SUBSCRIPTION_REQUESTED" ||
+        type === "PACKAGE_REQUESTED"
+      ) {
         setPendingSubscriptionsCount((prev) => prev + 1);
-      } else if (type === "SUBSCRIPTION_APPROVED" || type === "SUBSCRIPTION_REJECTED") {
+      } else if (
+        type === "SUBSCRIPTION_APPROVED" ||
+        type === "SUBSCRIPTION_REJECTED"
+      ) {
         setPendingSubscriptionsCount((prev) => Math.max(0, prev - 1));
       } else if (type === "TICKET_CREATED") {
         setOpenTicketsCount((prev) => prev + 1);
@@ -237,7 +265,10 @@ export default function Sidebar() {
     };
   }, [socket]);
 
-  const totalPendingBilling = pendingSubscriptionsCount + pendingAddonRequestsCount + pendingPaymentsCount;
+  const totalPendingBilling =
+    pendingSubscriptionsCount +
+    pendingAddonRequestsCount +
+    pendingPaymentsCount;
 
   const formatBadge = (count) => {
     if (!count || count <= 0) return undefined;
@@ -298,9 +329,7 @@ export default function Sidebar() {
     },
     {
       title: "Courier",
-      items: [
-        { name: "Sync Center", path: "/courier-sync", icon: Truck },
-      ],
+      items: [{ name: "Sync Center", path: "/courier-sync", icon: Truck }],
     },
     {
       title: "System",
