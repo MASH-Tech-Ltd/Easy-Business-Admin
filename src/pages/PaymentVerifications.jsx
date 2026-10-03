@@ -16,17 +16,30 @@ import {
   MessageSquare,
   Sparkles,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { useGetAllPaymentSubmissionsQuery } from '../store/apiSlice';
 import { MFSLogo } from '../components/MFSLogo';
 
 export default function PaymentVerifications() {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterProvider, setFilterProvider] = useState('all');
+  const [page, setPage] = useState(1);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Modal State for Verification / Rejection
   const [actionModal, setActionModal] = useState({
@@ -37,8 +50,13 @@ export default function PaymentVerifications() {
   });
   const [actionLoading, setActionLoading] = useState(false);
 
-  const { data: paymentsRes, isLoading: loading, refetch: fetchPayments } = useGetAllPaymentSubmissionsQuery();
-  const payments = paymentsRes?.data || [];
+  const { data: paymentsRes, isLoading: loading, refetch: fetchPayments } = useGetAllPaymentSubmissionsQuery({
+    search: debouncedSearch,
+    status: filterStatus,
+    provider: filterProvider,
+    page,
+    limit: 10,
+  });
 
   const { socket } = useSocket();
 
@@ -98,26 +116,47 @@ export default function PaymentVerifications() {
     }
   };
 
-  // Filtered Payments Calculation
-  const filteredPayments = payments.filter((p) => {
-    const storeName = p.tenantId?.name || p.tenantId?.domain || '';
-    const matchesSearch =
-      storeName.toLowerCase().includes(search.toLowerCase()) ||
-      p.transactionId?.toLowerCase().includes(search.toLowerCase()) ||
-      p.senderNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      p.purposeTitle?.toLowerCase().includes(search.toLowerCase());
+  // Handle both server-paginated { data: { data: [...], meta, stats } } and legacy unpaginated array
+  const isServerPaginated = Boolean(paymentsRes?.data?.meta);
+  const rawList = paymentsRes?.data?.data || paymentsRes?.data || [];
+  const paymentsList = Array.isArray(rawList) ? rawList : [];
 
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchesProvider = filterProvider === 'all' || p.provider?.toLowerCase() === filterProvider.toLowerCase();
+  const filteredPayments = isServerPaginated
+    ? paymentsList
+    : paymentsList.filter((p) => {
+        const storeName = p.tenantId?.name || p.tenantId?.domain || '';
+        const matchesSearch =
+          storeName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          p.transactionId?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          p.senderNumber?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          p.purposeTitle?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
-    return matchesSearch && matchesStatus && matchesProvider;
-  });
+        const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+        const matchesProvider =
+          filterProvider === 'all' || p.provider?.toLowerCase() === filterProvider.toLowerCase();
+
+        return matchesSearch && matchesStatus && matchesProvider;
+      });
+
+  const meta = isServerPaginated
+    ? (paymentsRes?.data?.meta || { page, limit: 10, total: paymentsList.length, totalPages: Math.ceil(paymentsList.length / 10) || 1 })
+    : {
+        page,
+        limit: 10,
+        total: filteredPayments.length,
+        totalPages: Math.ceil(filteredPayments.length / 10) || 1,
+      };
+
+  const displayPayments = isServerPaginated
+    ? paymentsList
+    : filteredPayments.slice((page - 1) * 10, page * 10);
 
   // Summary Stats
-  const totalCount = payments.length;
-  const pendingCount = payments.filter((p) => p.status === 'pending').length;
-  const approvedCount = payments.filter((p) => p.status === 'approved').length;
-  const approvedRevenue = payments
+  const serverStats = paymentsRes?.data?.stats;
+  const totalCount = serverStats?.totalCount ?? paymentsList.length;
+  const pendingCount = serverStats?.pendingCount ?? paymentsList.filter((p) => p.status === 'pending').length;
+  const approvedCount = serverStats?.approvedCount ?? paymentsList.filter((p) => p.status === 'approved').length;
+  const approvedRevenue = serverStats?.approvedRevenue ?? paymentsList
     .filter((p) => p.status === 'approved')
     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
@@ -186,8 +225,8 @@ export default function PaymentVerifications() {
               <input
                 type="text"
                 placeholder="Search store name, domain, or TrxID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
               />
             </div>
@@ -196,7 +235,10 @@ export default function PaymentVerifications() {
               <Filter className="w-4 h-4 text-slate-400 hidden sm:block" />
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setPage(1);
+                }}
                 className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
@@ -207,7 +249,10 @@ export default function PaymentVerifications() {
 
               <select
                 value={filterProvider}
-                onChange={(e) => setFilterProvider(e.target.value)}
+                onChange={(e) => {
+                  setFilterProvider(e.target.value);
+                  setPage(1);
+                }}
                 className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Providers</option>
@@ -245,14 +290,14 @@ export default function PaymentVerifications() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredPayments.length === 0 ? (
+              ) : displayPayments.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-slate-400 text-sm">
                     No payment submissions match your filter criteria.
                   </td>
                 </tr>
               ) : (
-                filteredPayments.map((p) => (
+                displayPayments.map((p) => (
                   <tr key={p._id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-900">{p.tenantId?.name || 'Unknown Store'}</div>
@@ -349,6 +394,48 @@ export default function PaymentVerifications() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {meta.total > 0 && (
+          <div className="px-6 py-4 bg-white/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-slate-500">
+              Showing <span className="font-medium text-slate-700">{Math.min((page - 1) * meta.limit + 1, meta.total)}</span> to <span className="font-medium text-slate-700">{Math.min(page * meta.limit, meta.total)}</span> of <span className="font-medium text-slate-700">{meta.total}</span> results
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {[...Array(meta.totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                    page === i + 1
+                      ? 'bg-[#5022C3] text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                disabled={page >= meta.totalPages}
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                title="Next Page"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action Verification Modal */}
