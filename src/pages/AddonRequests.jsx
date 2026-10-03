@@ -375,7 +375,22 @@ export default function AddonRequests() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">
-                      {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                      {(() => {
+                        const rawDate = req.requestedAt || req.createdAt || req.updatedAt;
+                        if (!rawDate) return '-';
+                        const d = new Date(rawDate);
+                        if (isNaN(d.getTime())) return '-';
+                        return (
+                          <div>
+                            <div className="font-semibold text-slate-700">
+                              {d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-wrap justify-end gap-1.5">
