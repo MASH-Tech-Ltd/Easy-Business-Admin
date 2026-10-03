@@ -4,6 +4,7 @@ import api from '../utils/api';
 import { ArrowLeft, Send, CheckCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function SupportDetails() {
   const { id } = useParams();
@@ -15,6 +16,17 @@ export default function SupportDetails() {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: null,
+    details: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    variant: 'danger',
+    isLoading: false,
+    onConfirm: () => {},
+  });
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -134,14 +146,30 @@ export default function SupportDetails() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+  const handleDelete = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Support Ticket?',
+      message: `Are you sure you want to permanently delete ticket #${ticket?.ticketId || id}?`,
+      details: 'All message threads and attachment history associated with this ticket will be removed.',
+      confirmText: 'Yes, Delete Ticket',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      isLoading: false,
+      onConfirm: executeDelete,
+    });
+  };
+
+  const executeDelete = async () => {
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
     try {
       await api.delete(`/support/ticket/${id}`);
       toast.success('Ticket deleted');
       navigate('/support');
     } catch (error) {
       toast.error('Failed to delete ticket');
+    } finally {
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     }
   };
 
@@ -285,6 +313,20 @@ export default function SupportDetails() {
           </form>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => !confirmModal.isLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }

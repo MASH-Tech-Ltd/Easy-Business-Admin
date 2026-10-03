@@ -7,6 +7,7 @@ import {
 import { useGetBlockedIpsQuery, useGetSecurityLogsQuery, useGetVisitorLogsQuery } from '../store/apiSlice';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
+import ConfirmModal from '../components/ConfirmModal';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Permanent';
@@ -21,6 +22,17 @@ export default function Security() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: null,
+    details: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    variant: 'danger',
+    isLoading: false,
+    onConfirm: () => {},
+  });
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -87,16 +99,30 @@ export default function Security() {
     }
   };
 
-  const handleClearVisitorLogs = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL visitor logs from the database? This action cannot be undone.')) {
-      return;
-    }
+  const handleClearVisitorLogs = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Clear All Visitor Logs?',
+      message: 'Are you sure you want to delete ALL visitor logs from the database?',
+      details: 'This will permanently remove all tracked visitor history and session analytics. This action cannot be undone.',
+      confirmText: 'Yes, Clear All Logs',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      isLoading: false,
+      onConfirm: executeClearVisitorLogs,
+    });
+  };
+
+  const executeClearVisitorLogs = async () => {
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
     try {
       await api.delete('/system/security/visitor-logs');
       toast.success('All visitor logs deleted successfully');
       refetchVisitor();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to clear visitor logs');
+    } finally {
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     }
   };
 
@@ -617,6 +643,20 @@ export default function Security() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => !confirmModal.isLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }

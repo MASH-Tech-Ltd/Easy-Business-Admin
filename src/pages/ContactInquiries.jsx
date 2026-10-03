@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Mail, CheckCircle, Trash2, Eye, X, Globe } from 'lucide-react';
 import api from '../utils/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -9,6 +10,17 @@ export default function ContactInquiries() {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: null,
+    details: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    variant: 'danger',
+    isLoading: false,
+    onConfirm: () => {},
+  });
 
   const fetchInquiries = async () => {
     try {
@@ -38,8 +50,22 @@ export default function ContactInquiries() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this inquiry?')) return;
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Inquiry?',
+      message: 'Are you sure you want to delete this contact inquiry?',
+      details: 'This action will permanently remove the message record.',
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      isLoading: false,
+      onConfirm: () => executeDelete(id),
+    });
+  };
+
+  const executeDelete = async (id) => {
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
     try {
       await api.delete(`/contact-inquiries/delete-inquiry/${id}`);
       toast.success('Inquiry deleted');
@@ -49,6 +75,8 @@ export default function ContactInquiries() {
       }
     } catch (error) {
       toast.error('Failed to delete inquiry');
+    } finally {
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     }
   };
 
@@ -232,6 +260,20 @@ export default function ContactInquiries() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => !confirmModal.isLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }

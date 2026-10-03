@@ -3,6 +3,7 @@ import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock,
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function GlobalSettings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -14,6 +15,17 @@ export default function GlobalSettings() {
   const [isSeedingAll, setIsSeedingAll] = useState(false);
   const [deletingThemeId, setDeletingThemeId] = useState(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: null,
+    details: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    variant: 'danger',
+    isLoading: false,
+    onConfirm: () => {},
+  });
 
   const [formData, setFormData] = useState({
     platformName: 'MASH ECO',
@@ -32,6 +44,8 @@ export default function GlobalSettings() {
     'design-04': '',
     'design-05': '',
   });
+
+  const [demoStoresStatus, setDemoStoresStatus] = useState({});
 
   const [platformTracking, setPlatformTracking] = useState({
     googleAnalytics: { enabled: false, measurementId: '' },
@@ -56,9 +70,13 @@ export default function GlobalSettings() {
   const fetchGlobalSettings = async () => {
     try {
       setIsLoadingGlobal(true);
-      const res = await api.get('/system/global-settings');
-      if (res.data?.data) {
-        const data = res.data.data;
+      const [settingsRes, statusRes] = await Promise.allSettled([
+        api.get('/system/global-settings'),
+        api.get('/seed/demo-stores-status'),
+      ]);
+
+      if (settingsRes.status === 'fulfilled' && settingsRes.value?.data?.data) {
+        const data = settingsRes.value.data.data;
         setFormData({
           platformName: data.platformName || 'MASH ECO',
           supportEmail: data.supportEmail || 'support@masheco.com',
@@ -76,6 +94,20 @@ export default function GlobalSettings() {
             'design-04': data.themePreviews['design-04'] || '',
             'design-05': data.themePreviews['design-05'] || '',
           });
+        }
+      }
+
+      if (statusRes.status === 'fulfilled' && statusRes.value?.data?.data?.stores) {
+        const statusMap = {};
+        statusRes.value.data.data.stores.forEach(s => {
+          statusMap[s.themeId] = s;
+        });
+        setDemoStoresStatus(statusMap);
+        if (statusRes.value.data.data.themePreviews) {
+          setThemePreviews(prev => ({
+            ...prev,
+            ...statusRes.value.data.data.themePreviews,
+          }));
         }
       }
     } catch (err) {
@@ -142,107 +174,215 @@ export default function GlobalSettings() {
 
   const handleSave = async () => {
     setIsSaving(true);
+    const toastId = toast.loading('Saving settings...');
     try {
       if (activeTab === 'tracking') {
         const res = await api.put('/tracking/platform', platformTracking);
-        if (res.data?.success) {
-          toast.success('Platform tracking configuration updated successfully!');
-        }
+        toast.update(toastId, {
+          render: res.data?.message || 'Platform tracking configuration updated successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000,
+        });
       } else if (activeTab === 'payments') {
         const res = await api.put('/billing/platform-payment-settings', { accounts: platformAccounts });
-        if (res.data?.success) {
-          toast.success('Platform payment accounts updated successfully!');
-        }
+        toast.update(toastId, {
+          render: res.data?.message || 'Platform payment accounts updated successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000,
+        });
       } else {
         const res = await api.put('/system/global-settings', {
           ...formData,
           themePreviews,
         });
-        if (res.data?.success) {
-          toast.success('Global settings & theme preview links updated successfully!');
-        }
+        toast.update(toastId, {
+          render: res.data?.message || 'Global settings & theme preview links updated successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000,
+        });
       }
     } catch (err) {
-      toast.error('Failed to save settings');
+      console.error('Failed to save settings', err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to save settings';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 4000,
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSeedDemoStore = async (themeId, subdomain) => {
+    const toastId = toast.loading(`Generating ${themeId} demo store (15 categories, 450 products, banner & policies)...`);
     try {
       setSeedingThemeId(themeId);
-      toast.info(`Generating ${themeId} demo store (15 categories, 450 products, banner, footer & policies)...`, { autoClose: 4000 });
       const res = await api.post('/seed/generate-demo-store', { themeId, subdomain });
-      if (res.data?.success) {
-        const data = res.data.data;
+      if (res.status >= 200 && res.status < 300) {
+        const data = res.data?.data;
+        const newUrl = data?.previewUrl || `http://${subdomain}.localhost:3000`;
         setThemePreviews(prev => ({
           ...prev,
-          [themeId]: data.previewUrl || prev[themeId],
+          [themeId]: newUrl,
         }));
-        toast.success(`Demo store "${data.storeName}" (${subdomain}) seeded with ${data.categoriesCount} categories and ${data.productsCount} products!`);
+        setDemoStoresStatus(prev => ({
+          ...prev,
+          [themeId]: {
+            themeId,
+            subdomain,
+            name: data?.storeName,
+            isSeeded: true,
+            categoriesCount: data?.categoriesCount || 15,
+            productsCount: data?.productsCount || 450,
+            previewUrl: newUrl,
+          },
+        }));
+        toast.update(toastId, {
+          render: res.data?.message || `Demo store "${data?.storeName || themeId}" (${subdomain}) seeded with ${data?.categoriesCount || 15} categories and ${data?.productsCount || 450} products!`,
+          type: 'success',
+          isLoading: false,
+          autoClose: 4000,
+        });
         fetchGlobalSettings();
       }
     } catch (err) {
       console.error('Failed to seed demo store', err);
-      toast.error(err.response?.data?.message || 'Failed to generate demo store');
+      const errMsg = err.response?.data?.message || err.message || 'Failed to generate demo store';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
     } finally {
       setSeedingThemeId(null);
     }
   };
 
   const handleSeedAllDemoStores = async () => {
+    const toastId = toast.loading('Generating all 5 demo stores (store1-store5, 75 categories, 2,250 products)... This takes a few moments.');
     try {
       setIsSeedingAll(true);
-      toast.info('Generating all 5 demo stores (store1-store5, 75 categories, 2,250 products, themes & banners)... This may take a few moments.', { autoClose: 8000 });
       const res = await api.post('/seed/generate-all-demo-stores');
-      if (res.data?.success) {
-        const data = res.data.data;
-        if (data.themePreviews) {
+      if (res.status >= 200 && res.status < 300) {
+        const data = res.data?.data;
+        if (data?.themePreviews) {
           setThemePreviews(data.themePreviews);
         }
-        toast.success('All 5 demo stores generated with complete banners, footers, 15 categories, and 30 products each!');
+        toast.update(toastId, {
+          render: res.data?.message || 'All 5 demo stores generated with complete banners, footers, 15 categories, and 30 products each!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 5000,
+        });
         fetchGlobalSettings();
       }
     } catch (err) {
       console.error('Failed to seed all demo stores', err);
-      toast.error(err.response?.data?.message || 'Failed to generate all demo stores');
+      const errMsg = err.response?.data?.message || err.message || 'Failed to generate all demo stores';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
     } finally {
       setIsSeedingAll(false);
     }
   };
 
-  const handleDeleteDemoStore = async (themeId, subdomain) => {
-    if (!window.confirm(`Are you sure you want to completely delete the demo store for ${themeId} (${subdomain})? All associated products, categories, theme settings, and preview links will be removed.`)) {
-      return;
-    }
+  const promptDeleteDemoStore = (themeId, subdomain) => {
+    setConfirmModal({
+      isOpen: true,
+      title: `Delete Demo Store (${subdomain})?`,
+      message: (
+        <span>
+          Are you sure you want to completely delete the demo store for <strong className="text-slate-900 font-semibold">{themeId}</strong> (<code className="font-mono font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">{subdomain}</code>)?
+        </span>
+      ),
+      details: 'All associated demo products, 15 categories, demo storefront banners, and preview links will be permanently deleted.',
+      confirmText: 'Yes, Delete Store',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      isLoading: false,
+      onConfirm: () => executeDeleteDemoStore(themeId, subdomain),
+    });
+  };
+
+  const executeDeleteDemoStore = async (themeId, subdomain) => {
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
+    const toastId = toast.loading(`Deleting demo store ${subdomain}...`);
     try {
       setDeletingThemeId(themeId);
       const res = await api.delete('/seed/delete-demo-store', { data: { themeId, subdomain } });
-      if (res.data?.success) {
+      if (res.status >= 200 && res.status < 300) {
         setThemePreviews(prev => ({
           ...prev,
           [themeId]: '',
         }));
-        toast.success(`Demo store for ${themeId} (${subdomain}) deleted successfully!`);
+        setDemoStoresStatus(prev => ({
+          ...prev,
+          [themeId]: {
+            ...(prev[themeId] || {}),
+            isSeeded: false,
+            categoriesCount: 0,
+            productsCount: 0,
+            previewUrl: '',
+          },
+        }));
+        toast.update(toastId, {
+          render: res.data?.message || `Demo store for ${themeId} (${subdomain}) deleted successfully!`,
+          type: 'success',
+          isLoading: false,
+          autoClose: 4000,
+        });
         fetchGlobalSettings();
       }
     } catch (err) {
       console.error('Failed to delete demo store', err);
-      toast.error(err.response?.data?.message || 'Failed to delete demo store');
+      const errMsg = err.response?.data?.message || err.message || 'Failed to delete demo store';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
     } finally {
       setDeletingThemeId(null);
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     }
   };
 
-  const handleDeleteAllDemoStores = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL 5 demo stores (store1-store5)? All categories, products, and storefront configurations will be deleted.')) {
-      return;
-    }
+  const promptDeleteAllDemoStores = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete ALL 5 Demo Stores?',
+      message: (
+        <span>
+          Are you sure you want to delete <strong className="text-slate-900 font-semibold">ALL 5 demo stores</strong> (<code className="font-mono font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">store1 – store5</code>)?
+        </span>
+      ),
+      details: 'This will permanently delete 5 demo tenants, 75 categories, 2,250 demo products, and clear all live demo preview links.',
+      confirmText: 'Yes, Delete All 5 Stores',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      isLoading: false,
+      onConfirm: executeDeleteAllDemoStores,
+    });
+  };
+
+  const executeDeleteAllDemoStores = async () => {
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
+    const toastId = toast.loading('Deleting all 5 demo stores and preview links...');
     try {
       setIsDeletingAll(true);
       const res = await api.delete('/seed/delete-all-demo-stores');
-      if (res.data?.success) {
+      if (res.status >= 200 && res.status < 300) {
         setThemePreviews({
           'design-01': '',
           'design-02': '',
@@ -250,14 +390,33 @@ export default function GlobalSettings() {
           'design-04': '',
           'design-05': '',
         });
-        toast.success('All 5 demo stores and preview links deleted successfully!');
+        setDemoStoresStatus(prev => {
+          const updated = { ...prev };
+          ['design-01', 'design-02', 'design-03', 'design-04', 'design-05'].forEach(tid => {
+            updated[tid] = { ...(updated[tid] || {}), isSeeded: false, categoriesCount: 0, productsCount: 0, previewUrl: '' };
+          });
+          return updated;
+        });
+        toast.update(toastId, {
+          render: res.data?.message || 'All 5 demo stores and preview links deleted successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 4000,
+        });
         fetchGlobalSettings();
       }
     } catch (err) {
       console.error('Failed to delete all demo stores', err);
-      toast.error(err.response?.data?.message || 'Failed to clear all demo stores');
+      const errMsg = err.response?.data?.message || err.message || 'Failed to clear all demo stores';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
     } finally {
       setIsDeletingAll(false);
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     }
   };
 
@@ -646,7 +805,10 @@ export default function GlobalSettings() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {platformAccounts.map((acc, index) => (
-                    <div key={acc.id} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col justify-between space-y-4 relative group hover:border-blue-300 transition-all">
+                    <div
+                      key={acc.id}
+                      className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm flex flex-col justify-between space-y-4 relative group hover:border-blue-300 transition-all"
+                    >
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -759,7 +921,7 @@ export default function GlobalSettings() {
                   <button
                     type="button"
                     disabled={isSeedingAll || Boolean(seedingThemeId) || isDeletingAll || Boolean(deletingThemeId)}
-                    onClick={handleDeleteAllDemoStores}
+                    onClick={promptDeleteAllDemoStores}
                     className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
                     title="Delete all 5 demo stores and reset preview links"
                   >
@@ -850,6 +1012,17 @@ export default function GlobalSettings() {
                             <Store className="w-3 h-3" />
                             {themeItem.subdomain}
                           </span>
+                          {demoStoresStatus[themeItem.id]?.isSeeded ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Live ({demoStoresStatus[themeItem.id]?.productsCount || 450} prods)
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-medium text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                              Not Seeded
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-500">{themeItem.desc}</p>
                       </div>
@@ -916,7 +1089,7 @@ export default function GlobalSettings() {
                         <button
                           type="button"
                           disabled={Boolean(seedingThemeId) || isSeedingAll || Boolean(deletingThemeId) || isDeletingAll}
-                          onClick={() => handleDeleteDemoStore(themeItem.id, themeItem.subdomain)}
+                          onClick={() => promptDeleteDemoStore(themeItem.id, themeItem.subdomain)}
                           className="flex-shrink-0 p-2.5 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-200 hover:border-red-200 transition-all disabled:opacity-40"
                           title={`Delete demo store ${themeItem.subdomain} and clear preview link`}
                         >
@@ -1074,6 +1247,20 @@ export default function GlobalSettings() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => !confirmModal.isLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        details={confirmModal.details}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }
