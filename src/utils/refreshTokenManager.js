@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { setCookie } from './cookieHelper';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -8,7 +9,13 @@ export const performRefreshToken = () => {
   if (!refreshTokenPromise) {
     refreshTokenPromise = axios
       .post(`${API_URL}/auth/refresh-token`, {}, { withCredentials: true })
-      .then((res) => res.data)
+      .then((res) => {
+        const newAccessToken = res.data?.data?.accessToken;
+        if (newAccessToken) {
+          setCookie('_super_x_tkn', newAccessToken, 24);
+        }
+        return res.data;
+      })
       .finally(() => {
         refreshTokenPromise = null;
       });

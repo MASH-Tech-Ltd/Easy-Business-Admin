@@ -1,9 +1,17 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { performRefreshToken } from '../utils/refreshTokenManager';
+import { getCookie, clearAllAuthCookies } from '../utils/cookieHelper';
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
   credentials: 'include',
+  prepareHeaders: (headers) => {
+    const token = getCookie('_super_x_tkn');
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    return headers;
+  },
 });
 
 let isRefreshingRTK = false;
@@ -38,6 +46,8 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       } catch (refreshErr) {
         processRTKQueue(refreshErr);
         localStorage.removeItem('user');
+        localStorage.removeItem('adminLoginTime');
+        clearAllAuthCookies();
         window.location.href = '/login';
       } finally {
         isRefreshingRTK = false;

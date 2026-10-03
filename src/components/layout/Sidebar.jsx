@@ -140,6 +140,7 @@ export default function Sidebar() {
     }
     localStorage.removeItem("user");
     localStorage.removeItem("adminLoginTime");
+    clearAllAuthCookies();
     navigate("/login");
   };
 

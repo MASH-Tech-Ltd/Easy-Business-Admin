@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, ShieldAlert, KeyRound, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, LogIn, ShieldAlert, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
+import { setCookie, getCookie, clearAllAuthCookies, SESSION_HOURS } from '../utils/cookieHelper';
 
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const SESSION_DURATION = SESSION_HOURS * 60 * 60 * 1000;
 
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,15 +22,16 @@ export default function Login() {
   useEffect(() => {
     try {
       const userStr = localStorage.getItem('user');
-      const loginTimeStr = localStorage.getItem('adminLoginTime');
+      const sessTimeStr = getCookie('_admin_sess_time') || localStorage.getItem('adminLoginTime');
       if (userStr) {
         const user = JSON.parse(userStr);
-        const isExpired = loginTimeStr && (Date.now() - parseInt(loginTimeStr, 10) > TWENTY_FOUR_HOURS);
+        const isExpired = sessTimeStr && (Date.now() - parseInt(sessTimeStr, 10) > SESSION_DURATION);
         if (user && user.role === 'super_admin' && !isExpired) {
           navigate('/', { replace: true });
         } else if (isExpired) {
           localStorage.removeItem('user');
           localStorage.removeItem('adminLoginTime');
+          clearAllAuthCookies();
         }
       }
     } catch (e) {}
@@ -50,13 +53,17 @@ export default function Login() {
         }
 
         const user = res.data.data.user;
+        const accessToken = res.data.data.accessToken;
         if (user && user.role !== 'super_admin') {
           throw new Error('Access denied. Super Admin privileges required.');
         }
         
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
-          localStorage.setItem('adminLoginTime', Date.now().toString());
+        }
+        setCookie('_admin_sess_time', Date.now().toString(), SESSION_HOURS);
+        if (accessToken) {
+          setCookie('_super_x_tkn', accessToken, SESSION_HOURS);
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
         window.location.href = '/';
@@ -91,12 +98,16 @@ export default function Login() {
       });
       if (res.data.success || res.data.status === 'ok') {
         const user = res.data.data.user;
+        const accessToken = res.data.data.accessToken;
         if (user && user.role !== 'super_admin') {
           throw new Error('Access denied. Super Admin privileges required.');
         }
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
-          localStorage.setItem('adminLoginTime', Date.now().toString());
+        }
+        setCookie('_admin_sess_time', Date.now().toString(), SESSION_HOURS);
+        if (accessToken) {
+          setCookie('_super_x_tkn', accessToken, SESSION_HOURS);
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
         window.location.href = '/';
@@ -161,13 +172,24 @@ export default function Login() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
                 {fieldErrors.password && (
                   <p className="text-red-400 text-xs mt-1 ml-1">{fieldErrors.password}</p>
