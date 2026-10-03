@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, ShieldAlert, KeyRound, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
+
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,6 +16,23 @@ export default function Login() {
   const [is2FARequired, setIs2FARequired] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const loginTimeStr = localStorage.getItem('adminLoginTime');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const isExpired = loginTimeStr && (Date.now() - parseInt(loginTimeStr, 10) > TWENTY_FOUR_HOURS);
+        if (user && user.role === 'super_admin' && !isExpired) {
+          navigate('/', { replace: true });
+        } else if (isExpired) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('adminLoginTime');
+        }
+      }
+    } catch (e) {}
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +56,7 @@ export default function Login() {
         
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('adminLoginTime', Date.now().toString());
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
         window.location.href = '/';
@@ -76,6 +96,7 @@ export default function Login() {
         }
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('adminLoginTime', Date.now().toString());
         }
         toast.success(res.data.message || 'Welcome back, Admin!');
         window.location.href = '/';

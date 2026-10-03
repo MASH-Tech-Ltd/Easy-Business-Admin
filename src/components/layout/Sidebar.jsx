@@ -139,6 +139,7 @@ export default function Sidebar() {
       console.error("Logout error", err);
     }
     localStorage.removeItem("user");
+    localStorage.removeItem("adminLoginTime");
     navigate("/login");
   };
 

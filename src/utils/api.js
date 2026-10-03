@@ -53,6 +53,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError);
         localStorage.removeItem('user');
+        localStorage.removeItem('adminLoginTime');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
@@ -62,6 +63,7 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !isAuthAction && originalRequest._retry) {
       localStorage.removeItem('user');
+      localStorage.removeItem('adminLoginTime');
       window.location.href = '/login';
     }
     return Promise.reject(error);
