@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -9,15 +9,28 @@ export default function GlobalSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTracking, setIsLoadingTracking] = useState(false);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
+  const [isLoadingGlobal, setIsLoadingGlobal] = useState(false);
+  const [seedingThemeId, setSeedingThemeId] = useState(null);
+  const [isSeedingAll, setIsSeedingAll] = useState(false);
+  const [deletingThemeId, setDeletingThemeId] = useState(null);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const [formData, setFormData] = useState({
     platformName: 'MASH ECO',
-    supportEmail: 'support@MASH ECO.com',
-    currency: 'USD',
+    supportEmail: 'support@masheco.com',
+    currency: 'BDT',
     timezone: 'UTC+06:00',
     maintenanceMode: false,
     maxTenants: 100,
     allowRegistration: true
+  });
+
+  const [themePreviews, setThemePreviews] = useState({
+    'design-01': '',
+    'design-02': '',
+    'design-03': '',
+    'design-04': '',
+    'design-05': '',
   });
 
   const [platformTracking, setPlatformTracking] = useState({
@@ -39,6 +52,38 @@ export default function GlobalSettings() {
     instructions: 'Send money/payment to this number and provide TrxID.',
     isActive: true,
   });
+
+  const fetchGlobalSettings = async () => {
+    try {
+      setIsLoadingGlobal(true);
+      const res = await api.get('/system/global-settings');
+      if (res.data?.data) {
+        const data = res.data.data;
+        setFormData({
+          platformName: data.platformName || 'MASH ECO',
+          supportEmail: data.supportEmail || 'support@masheco.com',
+          currency: data.currency || 'BDT',
+          timezone: data.timezone || 'UTC+06:00',
+          maintenanceMode: Boolean(data.maintenanceMode),
+          maxTenants: data.maxTenants ?? 100,
+          allowRegistration: data.allowRegistration !== false,
+        });
+        if (data.themePreviews) {
+          setThemePreviews({
+            'design-01': data.themePreviews['design-01'] || '',
+            'design-02': data.themePreviews['design-02'] || '',
+            'design-03': data.themePreviews['design-03'] || '',
+            'design-04': data.themePreviews['design-04'] || '',
+            'design-05': data.themePreviews['design-05'] || '',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load global settings', err);
+    } finally {
+      setIsLoadingGlobal(false);
+    }
+  };
 
   const fetchPlatformTracking = async () => {
     try {
@@ -82,10 +127,16 @@ export default function GlobalSettings() {
   };
 
   useEffect(() => {
+    fetchGlobalSettings();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'tracking') {
       fetchPlatformTracking();
     } else if (activeTab === 'payments') {
       fetchPlatformPayments();
+    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes') {
+      fetchGlobalSettings();
     }
   }, [activeTab]);
 
@@ -103,12 +154,110 @@ export default function GlobalSettings() {
           toast.success('Platform payment accounts updated successfully!');
         }
       } else {
-        toast.success('Global settings updated successfully!');
+        const res = await api.put('/system/global-settings', {
+          ...formData,
+          themePreviews,
+        });
+        if (res.data?.success) {
+          toast.success('Global settings & theme preview links updated successfully!');
+        }
       }
     } catch (err) {
       toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSeedDemoStore = async (themeId, subdomain) => {
+    try {
+      setSeedingThemeId(themeId);
+      toast.info(`Generating ${themeId} demo store (15 categories, 450 products, banner, footer & policies)...`, { autoClose: 4000 });
+      const res = await api.post('/seed/generate-demo-store', { themeId, subdomain });
+      if (res.data?.success) {
+        const data = res.data.data;
+        setThemePreviews(prev => ({
+          ...prev,
+          [themeId]: data.previewUrl || prev[themeId],
+        }));
+        toast.success(`Demo store "${data.storeName}" (${subdomain}) seeded with ${data.categoriesCount} categories and ${data.productsCount} products!`);
+        fetchGlobalSettings();
+      }
+    } catch (err) {
+      console.error('Failed to seed demo store', err);
+      toast.error(err.response?.data?.message || 'Failed to generate demo store');
+    } finally {
+      setSeedingThemeId(null);
+    }
+  };
+
+  const handleSeedAllDemoStores = async () => {
+    try {
+      setIsSeedingAll(true);
+      toast.info('Generating all 5 demo stores (store1-store5, 75 categories, 2,250 products, themes & banners)... This may take a few moments.', { autoClose: 8000 });
+      const res = await api.post('/seed/generate-all-demo-stores');
+      if (res.data?.success) {
+        const data = res.data.data;
+        if (data.themePreviews) {
+          setThemePreviews(data.themePreviews);
+        }
+        toast.success('All 5 demo stores generated with complete banners, footers, 15 categories, and 30 products each!');
+        fetchGlobalSettings();
+      }
+    } catch (err) {
+      console.error('Failed to seed all demo stores', err);
+      toast.error(err.response?.data?.message || 'Failed to generate all demo stores');
+    } finally {
+      setIsSeedingAll(false);
+    }
+  };
+
+  const handleDeleteDemoStore = async (themeId, subdomain) => {
+    if (!window.confirm(`Are you sure you want to completely delete the demo store for ${themeId} (${subdomain})? All associated products, categories, theme settings, and preview links will be removed.`)) {
+      return;
+    }
+    try {
+      setDeletingThemeId(themeId);
+      const res = await api.delete('/seed/delete-demo-store', { data: { themeId, subdomain } });
+      if (res.data?.success) {
+        setThemePreviews(prev => ({
+          ...prev,
+          [themeId]: '',
+        }));
+        toast.success(`Demo store for ${themeId} (${subdomain}) deleted successfully!`);
+        fetchGlobalSettings();
+      }
+    } catch (err) {
+      console.error('Failed to delete demo store', err);
+      toast.error(err.response?.data?.message || 'Failed to delete demo store');
+    } finally {
+      setDeletingThemeId(null);
+    }
+  };
+
+  const handleDeleteAllDemoStores = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL 5 demo stores (store1-store5)? All categories, products, and storefront configurations will be deleted.')) {
+      return;
+    }
+    try {
+      setIsDeletingAll(true);
+      const res = await api.delete('/seed/delete-all-demo-stores');
+      if (res.data?.success) {
+        setThemePreviews({
+          'design-01': '',
+          'design-02': '',
+          'design-03': '',
+          'design-04': '',
+          'design-05': '',
+        });
+        toast.success('All 5 demo stores and preview links deleted successfully!');
+        fetchGlobalSettings();
+      }
+    } catch (err) {
+      console.error('Failed to delete all demo stores', err);
+      toast.error(err.response?.data?.message || 'Failed to clear all demo stores');
+    } finally {
+      setIsDeletingAll(false);
     }
   };
 
@@ -205,6 +354,15 @@ export default function GlobalSettings() {
           >
             <Activity className={`w-5 h-5 ${activeTab === 'tracking' ? 'text-blue-600' : 'text-slate-400'}`} />
             Platform Tracking
+          </button>
+          <button 
+            onClick={() => setActiveTab('themes')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'themes' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Palette className={`w-5 h-5 ${activeTab === 'themes' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Theme Preview Links
           </button>
           <button 
             onClick={() => setActiveTab('payments')}
@@ -564,6 +722,210 @@ export default function GlobalSettings() {
                             Remove
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'themes' && (
+            <div className="p-8 space-y-6 animate-fade-in">
+              <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <Palette className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-800">Theme Preview & Live Demo Stores</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Auto-generate complete demo stores (15 categories, 30 products each, banners & policies) or configure dynamic preview links for merchants.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+                  <button
+                    type="button"
+                    disabled={isSeedingAll || Boolean(seedingThemeId) || isDeletingAll || Boolean(deletingThemeId)}
+                    onClick={handleSeedAllDemoStores}
+                    className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition-all disabled:opacity-50 hover:shadow-indigo-500/20 active:scale-95 whitespace-nowrap"
+                  >
+                    {isSeedingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-300" />}
+                    <span>{isSeedingAll ? 'Seeding All Stores (2,250 Prods)...' : '⚡ Seed All 5 Stores'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isSeedingAll || Boolean(seedingThemeId) || isDeletingAll || Boolean(deletingThemeId)}
+                    onClick={handleDeleteAllDemoStores}
+                    className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50 active:scale-95 whitespace-nowrap"
+                    title="Delete all 5 demo stores and reset preview links"
+                  >
+                    {isDeletingAll ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-600" /> : <Trash className="w-3.5 h-3.5 text-red-500" />}
+                    <span>{isDeletingAll ? 'Clearing All...' : '🗑️ Clear All'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-purple-50/40 border border-blue-200/60 rounded-2xl flex items-start gap-3.5">
+                <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-700 leading-relaxed space-y-1">
+                  <p className="font-semibold text-slate-900">Admin Demo Store Control Center</p>
+                  <p className="text-slate-600">
+                    Click <strong className="text-slate-800 font-semibold">"⚡ Seed Store"</strong> to automatically provision a demo tenant (<code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-indigo-600 font-bold">store1</code>–<code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-indigo-600 font-bold">store5</code>), <strong>15 categories</strong>, <strong>30 products each (450 total)</strong>, hero slides, and footer policies. You can test or delete stores anytime.
+                  </p>
+                </div>
+              </div>
+
+              {isLoadingGlobal ? (
+                <div className="py-16 flex justify-center">
+                  <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-4 pt-2">
+                  {[
+                    {
+                      id: 'design-01',
+                      subdomain: 'store1',
+                      name: 'Design 01 (Classic)',
+                      badge: 'Classic Multi-Category',
+                      color: '#5022C3',
+                      desc: 'Clean high-converting electronics store layout with hero carousel & featured collections.',
+                      placeholder: 'http://store1.localhost:3000 or https://store1.masheco.com'
+                    },
+                    {
+                      id: 'design-02',
+                      subdomain: 'store2',
+                      name: 'Design 02 (Minimal)',
+                      badge: 'Clean & Minimalist',
+                      color: '#3b82f6',
+                      desc: 'Modern minimalist layout with cool blue accents and streamlined navigation.',
+                      placeholder: 'http://store2.localhost:3000 or https://store2.masheco.com'
+                    },
+                    {
+                      id: 'design-03',
+                      subdomain: 'store3',
+                      name: 'Design 03 (Brutalist)',
+                      badge: 'Dark Tech / Cyber',
+                      color: '#06b6d4',
+                      desc: 'High-contrast dark-mode theme engineered for modern tech & gadget brands.',
+                      placeholder: 'http://store3.localhost:3000 or https://store3.masheco.com'
+                    },
+                    {
+                      id: 'design-04',
+                      subdomain: 'store4',
+                      name: 'Design 04 (Clean)',
+                      badge: 'Modern Grid & Spec Focus',
+                      color: '#111827',
+                      desc: 'Crisp layout with enhanced product specifications and modern cards.',
+                      placeholder: 'http://store4.localhost:3000 or https://store4.masheco.com'
+                    },
+                    {
+                      id: 'design-05',
+                      subdomain: 'store5',
+                      name: 'Design 05 (Premium)',
+                      badge: 'Luxury Boutique Electronics',
+                      color: '#000000',
+                      desc: 'Exclusive premium storefront aesthetics for flagship electronics and luxury gadgets.',
+                      placeholder: 'http://store5.localhost:3000 or https://store5.masheco.com'
+                    },
+                  ].map((themeItem) => (
+                    <div 
+                      key={themeItem.id} 
+                      className="p-5 border border-slate-200/90 rounded-2xl bg-white hover:border-blue-300 shadow-sm transition-all flex flex-col xl:flex-row xl:items-center justify-between gap-4 group"
+                    >
+                      <div className="space-y-1.5 xl:w-4/12">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span 
+                            className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-xs flex-shrink-0" 
+                            style={{ backgroundColor: themeItem.color }}
+                          />
+                          <h3 className="font-bold text-slate-800 text-sm tracking-tight">{themeItem.name}</h3>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                            {themeItem.id}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Store className="w-3 h-3" />
+                            {themeItem.subdomain}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500">{themeItem.desc}</p>
+                      </div>
+
+                      <div className="flex-1 flex flex-col sm:flex-row items-center gap-2.5">
+                        <div className="relative w-full">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <LinkIcon className="w-4 h-4" />
+                          </div>
+                          <input 
+                            type="url"
+                            value={themePreviews[themeItem.id] || ''}
+                            onChange={(e) => setThemePreviews({
+                              ...themePreviews,
+                              [themeItem.id]: e.target.value
+                            })}
+                            placeholder={themeItem.placeholder}
+                            className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800"
+                          />
+                        </div>
+
+                        {/* Seed Button for this theme */}
+                        <button
+                          type="button"
+                          disabled={Boolean(seedingThemeId) || isSeedingAll || Boolean(deletingThemeId) || isDeletingAll}
+                          onClick={() => handleSeedDemoStore(themeItem.id, themeItem.subdomain)}
+                          className="flex-shrink-0 bg-slate-900 hover:bg-black text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-95 whitespace-nowrap"
+                          title={`Auto-generate ${themeItem.name} with 15 categories, 450 products, banner & footer`}
+                        >
+                          {seedingThemeId === themeItem.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                          ) : (
+                            <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          <span>
+                            {seedingThemeId === themeItem.id ? 'Seeding...' : '⚡ Seed Store'}
+                          </span>
+                        </button>
+
+                        {/* Test Link Button */}
+                        {themePreviews[themeItem.id] ? (
+                          <a
+                            href={themePreviews[themeItem.id]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-blue-200 flex items-center gap-1.5 transition-colors shadow-xs whitespace-nowrap"
+                            title="Open demo store in new tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Test Link</span>
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="flex-shrink-0 bg-slate-100 text-slate-400 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 flex items-center gap-1.5 cursor-not-allowed opacity-60 whitespace-nowrap"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>No Link</span>
+                          </button>
+                        )}
+
+                        {/* Delete Single Demo Store Button */}
+                        <button
+                          type="button"
+                          disabled={Boolean(seedingThemeId) || isSeedingAll || Boolean(deletingThemeId) || isDeletingAll}
+                          onClick={() => handleDeleteDemoStore(themeItem.id, themeItem.subdomain)}
+                          className="flex-shrink-0 p-2.5 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-200 hover:border-red-200 transition-all disabled:opacity-40"
+                          title={`Delete demo store ${themeItem.subdomain} and clear preview link`}
+                        >
+                          {deletingThemeId === themeItem.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-600" />
+                          ) : (
+                            <Trash className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   ))}
