@@ -348,7 +348,13 @@ export default function PaymentVerifications() {
                         {p.tenantId?.name || "Unknown Store"}
                       </div>
                       <div className="text-xs text-slate-400 font-mono">
-                        {p.tenantId?.domain || "N/A"}
+                        {p.tenantId?.customDomain &&
+                        p.tenantId?.domainStatus === "active"
+                          ? p.tenantId.customDomain
+                          : p.tenantId?.domain ||
+                            (p.tenantId?.slug
+                              ? `${p.tenantId.slug}.masheco.com`
+                              : p.tenantId?.customDomain || "N/A")}
                       </div>
                     </td>
 

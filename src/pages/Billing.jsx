@@ -55,9 +55,13 @@ const Billing = () => {
     try {
       setLoadingPayments(true);
       const res = await api.get("/billing/all-payments");
-      if (res.data?.data) {
-        setPaymentSubmissions(res.data.data);
-      }
+      const rawData = res.data?.data || res.data;
+      const dataArr = Array.isArray(rawData?.data)
+        ? rawData.data
+        : Array.isArray(rawData)
+          ? rawData
+          : [];
+      setPaymentSubmissions(dataArr);
     } catch (err) {
       console.error("Failed to load payment submissions", err);
     } finally {
@@ -89,9 +93,9 @@ const Billing = () => {
     }
   };
 
-  const pendingPaymentsCount = paymentSubmissions.filter(
-    (p) => p.status === "pending"
-  ).length;
+  const pendingPaymentsCount = Array.isArray(paymentSubmissions)
+    ? paymentSubmissions.filter((p) => p?.status === "pending").length
+    : 0;
 
   // RTK Query Hooks
   const {
@@ -112,8 +116,13 @@ const Billing = () => {
   });
 
   const billingData = billingOverviewRes?.data || null;
-  const subscriptions = subscriptionsRes?.data || [];
-  const meta = subscriptionsRes?.meta || {
+  const rawSubsData = subscriptionsRes?.data || subscriptionsRes;
+  const subscriptions = Array.isArray(rawSubsData?.data)
+    ? rawSubsData.data
+    : Array.isArray(rawSubsData)
+      ? rawSubsData
+      : [];
+  const meta = rawSubsData?.meta || subscriptionsRes?.meta || {
     page: 1,
     limit: 10,
     totalPages: 1,

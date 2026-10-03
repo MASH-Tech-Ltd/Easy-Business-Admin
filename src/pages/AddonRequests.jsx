@@ -397,8 +397,14 @@ export default function AddonRequests() {
                       <div className="font-semibold text-slate-900">
                         {req.tenant?.name || "Unknown Store"}
                       </div>
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        {req.tenant?.domain}
+                      <div className="text-xs text-slate-400 mt-0.5 font-mono">
+                        {req.tenant?.customDomain &&
+                        req.tenant?.domainStatus === "active"
+                          ? req.tenant.customDomain
+                          : req.tenant?.domain ||
+                            (req.tenant?.slug
+                              ? `${req.tenant.slug}.masheco.com`
+                              : req.tenant?.customDomain || "N/A")}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -428,38 +434,61 @@ export default function AddonRequests() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
-                        ${
-                          req.status === "pending"
-                            ? "bg-amber-50 text-amber-600 border-amber-200"
-                            : req.status === "active"
-                              ? "bg-green-50 text-green-600 border-green-200"
-                              : req.status === "inactive"
-                                ? "bg-orange-50 text-orange-600 border-orange-200"
-                                : req.status === "terminated"
-                                  ? "bg-red-50 text-red-600 border-red-200"
-                                  : "bg-slate-100 text-slate-500 border-slate-200"
-                        }`}
-                      >
-                        {req.status === "pending" && (
-                          <Clock className="w-3 h-3" />
-                        )}
-                        {req.status === "active" && (
-                          <Check className="w-3 h-3" />
-                        )}
-                        {req.status === "inactive" && (
-                          <PauseCircle className="w-3 h-3" />
-                        )}
-                        {req.status === "terminated" && (
-                          <X className="w-3 h-3" />
-                        )}
-                        {req.status === "rejected" && <X className="w-3 h-3" />}
-                        {req.status === "inactive"
-                          ? "On Hold"
-                          : req.status.charAt(0).toUpperCase() +
-                            req.status.slice(1)}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border w-fit
+                          ${
+                            req.status === "pending"
+                              ? "bg-amber-50 text-amber-600 border-amber-200"
+                              : req.status === "active"
+                                ? "bg-green-50 text-green-600 border-green-200"
+                                : req.status === "inactive"
+                                  ? "bg-orange-50 text-orange-600 border-orange-200"
+                                  : req.status === "terminated"
+                                    ? "bg-red-50 text-red-600 border-red-200"
+                                    : "bg-slate-100 text-slate-500 border-slate-200"
+                          }`}
+                        >
+                          {req.status === "pending" && (
+                            <Clock className="w-3 h-3" />
+                          )}
+                          {req.status === "active" && (
+                            <Check className="w-3 h-3" />
+                          )}
+                          {req.status === "inactive" && (
+                            <PauseCircle className="w-3 h-3" />
+                          )}
+                          {req.status === "terminated" && (
+                            <X className="w-3 h-3" />
+                          )}
+                          {req.status === "rejected" && <X className="w-3 h-3" />}
+                          {req.status === "inactive"
+                            ? "On Hold"
+                            : req.status.charAt(0).toUpperCase() +
+                              req.status.slice(1)}
+                        </span>
+                        
+                        {/* Payment Verification Sub-Badge */}
+                        <div className="text-[11px] font-medium">
+                          {req.paymentStatus === "approved" ? (
+                            <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                              ✓ Payment Verified
+                            </span>
+                          ) : req.paymentStatus === "pending" ? (
+                            <span className="text-amber-600 font-semibold flex items-center gap-1">
+                              ⏱ Payment Pending Proof
+                            </span>
+                          ) : req.paymentStatus === "rejected" ? (
+                            <span className="text-red-500 font-semibold flex items-center gap-1">
+                              ✕ Payment Rejected
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal">
+                              No Payment Proof
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs">
                       {(() => {
@@ -502,10 +531,21 @@ export default function AddonRequests() {
                               }
                               disabled={
                                 actionLoading ===
-                                `${req.subscriptionId}-${req.addonId}-approve`
+                                `${req.subscriptionId}-${req.addonId}-approve` ||
+                                req.paymentStatus !== "approved"
                               }
-                              className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
-                              title="Approve Add-on Request"
+                              className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-xs font-semibold gap-1 transition-colors ${
+                                req.paymentStatus === "approved"
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 opacity-60"
+                              }`}
+                              title={
+                                req.paymentStatus === "approved"
+                                  ? "Approve Add-on Request"
+                                  : req.paymentStatus === "pending"
+                                  ? "Cannot approve: Payment verification pending under Payment Proofs"
+                                  : "Cannot approve: Payment not confirmed"
+                              }
                             >
                               <Check className="w-3 h-3" /> Approve
                             </button>
@@ -581,10 +621,19 @@ export default function AddonRequests() {
                               }
                               disabled={
                                 actionLoading ===
-                                `${req.subscriptionId}-${req.addonId}-reactivate`
+                                `${req.subscriptionId}-${req.addonId}-reactivate` ||
+                                req.paymentStatus !== "approved"
                               }
-                              className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
-                              title="Re-activate Add-on"
+                              className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-xs font-semibold gap-1 transition-colors ${
+                                req.paymentStatus === "approved"
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 opacity-60"
+                              }`}
+                              title={
+                                req.paymentStatus === "approved"
+                                  ? "Re-activate Add-on"
+                                  : "Cannot re-activate: Payment is not confirmed/successful"
+                              }
                             >
                               <Check className="w-3 h-3" /> Re-activate
                             </button>
@@ -626,10 +675,19 @@ export default function AddonRequests() {
                               }
                               disabled={
                                 actionLoading ===
-                                `${req.subscriptionId}-${req.addonId}-approve`
+                                `${req.subscriptionId}-${req.addonId}-approve` ||
+                                req.paymentStatus !== "approved"
                               }
-                              className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 text-xs font-semibold gap-1"
-                              title="Re-approve Add-on"
+                              className={`inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-xs font-semibold gap-1 transition-colors ${
+                                req.paymentStatus === "approved"
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 opacity-60"
+                              }`}
+                              title={
+                                req.paymentStatus === "approved"
+                                  ? "Re-approve Add-on"
+                                  : "Cannot re-approve: Payment was not successful or rejected"
+                              }
                             >
                               <Check className="w-3 h-3" /> Re-approve
                             </button>

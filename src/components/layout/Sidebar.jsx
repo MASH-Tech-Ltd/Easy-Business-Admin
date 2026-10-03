@@ -216,30 +216,7 @@ export default function Sidebar() {
 
     const handleNewNotification = (notification) => {
       if (!notification) return;
-      const type = notification.type;
-      if (type === "ADDON_REQUESTED") {
-        setPendingAddonRequestsCount((prev) => prev + 1);
-      } else if (type === "ADDON_APPROVED" || type === "ADDON_REJECTED") {
-        setPendingAddonRequestsCount((prev) => Math.max(0, prev - 1));
-      } else if (
-        type === "SUBSCRIPTION_REQUESTED" ||
-        type === "PACKAGE_REQUESTED"
-      ) {
-        setPendingSubscriptionsCount((prev) => prev + 1);
-      } else if (
-        type === "SUBSCRIPTION_APPROVED" ||
-        type === "SUBSCRIPTION_REJECTED"
-      ) {
-        setPendingSubscriptionsCount((prev) => Math.max(0, prev - 1));
-      } else if (type === "TICKET_CREATED") {
-        setOpenTicketsCount((prev) => prev + 1);
-      } else if (type === "PAYMENT_SUBMITTED") {
-        setPendingPaymentsCount((prev) => prev + 1);
-      } else if (type === "PAYMENT_VERIFIED" || type === "PAYMENT_REJECTED") {
-        setPendingPaymentsCount((prev) => Math.max(0, prev - 1));
-      } else {
-        fetchCounts();
-      }
+      fetchCounts();
     };
 
     const handleNewTicket = () => {
