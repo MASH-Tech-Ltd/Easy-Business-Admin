@@ -388,13 +388,24 @@ export default function Packages() {
               {pkg.name}
             </h3>
 
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-4xl font-extrabold text-slate-900">
-                ৳ {pkg.price}
-              </span>
-              <span className="text-slate-500 font-medium">
-                /{pkg.billingCycle === "yearly" ? "yr" : "mo"}
-              </span>
+            <div className="mt-4">
+              {pkg.billingCycle === "yearly" ? (
+                <div className="text-base sm:text-lg font-semibold text-slate-400 line-through decoration-red-300 decoration-1 leading-tight">
+                  ৳{Math.round(pkg.price * 1.2).toLocaleString()}
+                </div>
+              ) : (
+                <div className="text-base sm:text-lg font-semibold invisible select-none leading-tight">
+                  ৳0
+                </div>
+              )}
+              <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
+                <span className="text-4xl font-extrabold text-slate-900">
+                  ৳{pkg.price.toLocaleString()}
+                </span>
+                <span className="text-slate-500 font-medium text-sm">
+                  / Per {pkg.billingCycle === "yearly" ? "Year" : "Month"}
+                </span>
+              </div>
             </div>
 
             <div className="mt-8 space-y-4 flex-grow">
