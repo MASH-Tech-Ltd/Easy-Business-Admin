@@ -70,6 +70,7 @@ export default function Clients() {
     customDomain: "",
     subdomain: "",
     status: "",
+    isOnline: true,
     showDemoSeed: true,
   });
 
@@ -166,6 +167,7 @@ export default function Clients() {
       customDomain: client.customDomain || "",
       subdomain: client.slug || "",
       status: client.status,
+      isOnline: client.isOnline !== false,
       showDemoSeed: client.showDemoSeed !== false,
     });
     setActiveMetrics(null);
@@ -300,10 +302,11 @@ export default function Clients() {
               <th className="px-6 py-4">Subdomain</th>
               <th className="px-6 py-4">Domain</th>
               <th className="px-6 py-4">Owner Email</th>
+              <th className="px-6 py-4 text-center">Store Mode</th>
+              <th className="px-6 py-4">Subscription & Plan</th>
               <th className="px-6 py-4 text-center">Products</th>
               <th className="px-6 py-4 text-center">Categories</th>
-              <th className="px-6 py-4">Package</th>
-              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Account Status</th>
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -348,6 +351,67 @@ export default function Clients() {
                     {client.ownerId?.email || "N/A"}
                   </div>
                 </td>
+
+                {/* Store Online / Offline Manual Toggle Column */}
+                <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      title={client.isOnline !== false ? "Click to set Store Offline" : "Click to set Store Online"}
+                      onClick={async () => {
+                        try {
+                          const newOnline = client.isOnline === false ? true : false;
+                          const res = await api.patch(`/tenants/update-tenant/${client._id}`, { isOnline: newOnline });
+                          if (res.data.success || res.data.status === "ok") {
+                            toast.success(`Store set to ${newOnline ? 'ONLINE 🟢' : 'OFFLINE 🔴'} for ${client.name}`);
+                            fetchClients();
+                          }
+                        } catch (error) {
+                          toast.error("Failed to update store online status");
+                        }
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        client.isOnline !== false ? 'bg-emerald-500' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          client.isOnline !== false ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-xs font-bold ${client.isOnline !== false ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      {client.isOnline !== false ? 'ONLINE' : 'OFFLINE'}
+                    </span>
+                  </div>
+                </td>
+
+                {/* Subscription Plan & Status Column */}
+                <td className="px-6 py-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-slate-800">
+                      {client.subscription?.packageName || client.package?.name || (client.subscription?.isTrial ? 'Free Trial' : 'No Plan')}
+                    </span>
+                    {client.subscription?.status ? (
+                      <span className={`self-start px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
+                        client.subscription.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : client.subscription.status === 'expired'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : client.subscription.status === 'pending'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {client.subscription.status}
+                      </span>
+                    ) : (
+                      <span className="self-start px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
+                        NONE
+                      </span>
+                    )}
+                  </div>
+                </td>
+
                 <td className="px-6 py-4 text-center">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/70 shadow-xs">
                     <Package className="w-3.5 h-3.5 text-blue-500" />
@@ -361,19 +425,12 @@ export default function Clients() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  {client.package ? (
-                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700">
-                      {client.package.name}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 text-xs italic">None</span>
-                  )}
-                </td>
-                <td className="px-6 py-4">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       client.status === "active"
                         ? "bg-green-100 text-green-700"
+                        : client.status === "banned"
+                        ? "bg-red-100 text-red-700"
                         : "bg-amber-100 text-amber-700"
                     }`}
                   >
@@ -711,7 +768,28 @@ export default function Clients() {
                       }
                     >
                       <option value="active">🟢 Active</option>
-                      <option value="inactive">🔴 Inactive</option>
+                      <option value="pending">🟡 Pending</option>
+                      <option value="inactive">⚪ Inactive</option>
+                      <option value="suspended">🟠 Suspended</option>
+                      <option value="banned">⛔ Banned</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Store Mode (Online / Offline)
+                    </label>
+                    <select
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm font-medium"
+                      value={editFormData.isOnline ? "true" : "false"}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          isOnline: e.target.value === "true",
+                        })
+                      }
+                    >
+                      <option value="true">🟢 Online (Storefront Live)</option>
+                      <option value="false">🔴 Offline (Maintenance Mode)</option>
                     </select>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl mt-4">
