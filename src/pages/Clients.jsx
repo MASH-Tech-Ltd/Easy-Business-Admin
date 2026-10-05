@@ -17,6 +17,7 @@ import {
   Sparkles,
   Package,
   Layers,
+  Calendar,
 } from "lucide-react";
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
@@ -303,7 +304,7 @@ export default function Clients() {
               <th className="px-6 py-4">Domain</th>
               <th className="px-6 py-4">Owner Email</th>
               <th className="px-6 py-4 text-center">Store Mode</th>
-              <th className="px-6 py-4">Subscription & Plan</th>
+              <th className="px-6 py-4 min-w-[220px]">Subscription & Plan</th>
               <th className="px-6 py-4 text-center">Products</th>
               <th className="px-6 py-4 text-center">Categories</th>
               <th className="px-6 py-4">Account Status</th>
@@ -387,26 +388,59 @@ export default function Clients() {
                 </td>
 
                 {/* Subscription Plan & Status Column */}
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-slate-800">
-                      {client.subscription?.packageName || client.package?.name || (client.subscription?.isTrial ? 'Free Trial' : 'No Plan')}
-                    </span>
-                    {client.subscription?.status ? (
-                      <span className={`self-start px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
-                        client.subscription.status === 'active'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : client.subscription.status === 'expired'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : client.subscription.status === 'pending'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                <td className="px-6 py-3 min-w-[220px]">
+                  <div className="flex flex-col gap-0.5 items-start">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Distinct Purple Badge for Free Trial vs Paid Plan */}
+                      {client.subscription?.isTrial || client.subscription?.packageName === 'Free Trial' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200/80 shadow-2xs">
+                          <Sparkles className="w-2.5 h-2.5 text-purple-600" /> Free Trial
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-800">
+                          {client.subscription?.packageName || client.package?.name || 'No Plan'}
+                        </span>
+                      )}
+
+                      {/* Dynamic Status Badge calculated from Expire Date */}
+                      {(() => {
+                        const sub = client.subscription;
+                        if (!sub) {
+                          return (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
+                              NONE
+                            </span>
+                          );
+                        }
+                        const isExpired = sub.endDate && new Date(sub.endDate) < new Date();
+                        const effectiveStatus = isExpired ? 'expired' : sub.status;
+
+                        return (
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wide border ${
+                            effectiveStatus === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : effectiveStatus === 'expired'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : effectiveStatus === 'pending'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {effectiveStatus}
+                          </span>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Compact Expire Date display */}
+                    {client.subscription?.endDate && (
+                      <span className={`text-[10px] font-medium flex items-center gap-1 ${
+                        new Date(client.subscription.endDate) < new Date()
+                          ? 'text-rose-600 font-semibold'
+                          : 'text-slate-400'
                       }`}>
-                        {client.subscription.status}
-                      </span>
-                    ) : (
-                      <span className="self-start px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 border border-slate-200">
-                        NONE
+                        <Calendar className="w-2.5 h-2.5 opacity-70" />
+                        {new Date(client.subscription.endDate) < new Date() ? 'Expired: ' : 'Exp: '}
+                        {new Date(client.subscription.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                   </div>
