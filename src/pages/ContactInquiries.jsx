@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { Mail, CheckCircle, Trash2, Eye, X, Globe } from 'lucide-react';
+import { Mail, Phone, CheckCircle, Trash2, Eye, X, Globe } from 'lucide-react';
 import api from '../utils/api';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -99,7 +99,7 @@ export default function ContactInquiries() {
           <table className="w-full text-left text-sm text-gray-500">
             <thead className="bg-gray-50 text-xs uppercase text-gray-700">
               <tr>
-                <th className="px-6 py-4">Name / Email</th>
+                <th className="px-6 py-4">Name / Contact</th>
                 <th className="px-6 py-4">Topic</th>
                 <th className="px-6 py-4 max-w-xs">Message</th>
                 <th className="px-6 py-4">Date</th>
@@ -119,10 +119,16 @@ export default function ContactInquiries() {
                   <tr key={inquiry._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="font-medium text-gray-900">{inquiry.firstName} {inquiry.lastName}</div>
-                      <div className="text-gray-500 flex items-center gap-1 mt-1">
-                        <Mail className="w-3 h-3" />
-                        {inquiry.email}
+                      <div className="text-gray-800 flex items-center gap-1 mt-1 text-xs font-semibold">
+                        <Phone className="w-3 h-3 text-blue-600" />
+                        {inquiry.phone || 'N/A'}
                       </div>
+                      {inquiry.email && (
+                        <div className="text-gray-500 flex items-center gap-1 mt-0.5 text-xs">
+                          <Mail className="w-3 h-3" />
+                          {inquiry.email}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
@@ -215,9 +221,14 @@ export default function ContactInquiries() {
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Sender</label>
                   <p className="text-gray-900 font-medium mt-1">{selectedInquiry.firstName} {selectedInquiry.lastName}</p>
-                  <p className="text-gray-500 text-sm flex items-center gap-1 mt-1">
-                    <Mail className="w-3.5 h-3.5" /> {selectedInquiry.email}
+                  <p className="text-gray-900 text-sm flex items-center gap-1 mt-1 font-semibold">
+                    <Phone className="w-3.5 h-3.5 text-blue-600" /> {selectedInquiry.phone || 'N/A'}
                   </p>
+                  {selectedInquiry.email && (
+                    <p className="text-gray-500 text-sm flex items-center gap-1 mt-1">
+                      <Mail className="w-3.5 h-3.5" /> {selectedInquiry.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Metadata</label>
