@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -34,7 +34,18 @@ export default function GlobalSettings() {
     timezone: 'UTC+06:00',
     maintenanceMode: false,
     maxTenants: 100,
-    allowRegistration: true
+    allowRegistration: true,
+    couriers: [
+      { id: 'pathao', isActive: true, badge: 'none', message: '' },
+      { id: 'steadfast', isActive: true, badge: 'none', message: '' },
+      { id: 'redx', isActive: true, badge: 'none', message: '' }
+    ],
+    sidebarMenu: [
+      { id: 'courier', isActive: true, badge: 'beta', message: '' },
+      { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
+      { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
+      { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
+    ]
   });
 
   const [themePreviews, setThemePreviews] = useState({
@@ -85,6 +96,17 @@ export default function GlobalSettings() {
           maintenanceMode: Boolean(data.maintenanceMode),
           maxTenants: data.maxTenants ?? 100,
           allowRegistration: data.allowRegistration !== false,
+          couriers: data.couriers || [
+            { id: 'pathao', isActive: true, badge: 'none', message: '' },
+            { id: 'steadfast', isActive: true, badge: 'none', message: '' },
+            { id: 'redx', isActive: true, badge: 'none', message: '' }
+          ],
+          sidebarMenu: data.sidebarMenu || [
+            { id: 'courier', isActive: true, badge: 'beta', message: '' },
+            { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
+            { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
+            { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
+          ]
         });
         if (data.themePreviews) {
           setThemePreviews({
@@ -167,7 +189,7 @@ export default function GlobalSettings() {
       fetchPlatformTracking();
     } else if (activeTab === 'payments') {
       fetchPlatformPayments();
-    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes') {
+    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers') {
       fetchGlobalSettings();
     }
   }, [activeTab]);
@@ -532,6 +554,15 @@ export default function GlobalSettings() {
             <Wallet className={`w-5 h-5 ${activeTab === 'payments' ? 'text-blue-600' : 'text-slate-400'}`} />
             Platform Payment Accounts
           </button>
+          <button 
+            onClick={() => setActiveTab('couriers')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'couriers' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Truck className={`w-5 h-5 ${activeTab === 'couriers' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Couriers Setup
+          </button>
         </div>
 
         {/* Content Area */}
@@ -584,6 +615,126 @@ export default function GlobalSettings() {
                     <option value="UTC-05:00">UTC-05:00 New York</option>
                   </select>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'couriers' && (
+            <div className="p-8 space-y-6 animate-fade-in">
+              <h2 className="text-lg font-semibold text-slate-800 mb-6 border-b border-slate-100 pb-4">Couriers Visibility & Badges</h2>
+              <div className="space-y-4">
+                {formData.couriers.map((courier, index) => (
+                  <div key={courier.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-slate-800 capitalize">{courier.id}</h3>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <select
+                          value={courier.badge}
+                          onChange={(e) => {
+                            const newCouriers = [...formData.couriers];
+                            newCouriers[index].badge = e.target.value;
+                            setFormData({ ...formData, couriers: newCouriers });
+                          }}
+                          className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none"
+                        >
+                          <option value="none">No Badge</option>
+                          <option value="new">NEW</option>
+                          <option value="beta">BETA</option>
+                        </select>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={courier.isActive}
+                            onChange={(e) => {
+                              const newCouriers = [...formData.couriers];
+                              newCouriers[index].isActive = e.target.checked;
+                              setFormData({ ...formData, couriers: newCouriers });
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                    {!courier.isActive && (
+                      <div className="w-full">
+                        <input
+                          type="text"
+                          placeholder="Inactive Message (e.g., 'Will be available very soon')"
+                          value={courier.message || ''}
+                          onChange={(e) => {
+                            const newCouriers = [...formData.couriers];
+                            newCouriers[index].message = e.target.value;
+                            setFormData({ ...formData, couriers: newCouriers });
+                          }}
+                          className="w-full px-4 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <h2 className="text-lg font-semibold text-slate-800 mb-6 mt-12 border-b border-slate-100 pb-4">Sidebar Items Status (Merchant)</h2>
+              <div className="space-y-4">
+                {formData.sidebarMenu.map((menuItem, index) => (
+                  <div key={menuItem.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-slate-800 capitalize">
+                          {menuItem.id === 'fraudCheck' ? 'Fraud Check' : 
+                           menuItem.id === 'checkoutLeads' ? 'Checkout Leads' : 
+                           menuItem.id === 'apiKeys' ? 'API Keys' : menuItem.id}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <select
+                          value={menuItem.badge}
+                          onChange={(e) => {
+                            const newMenu = [...formData.sidebarMenu];
+                            newMenu[index].badge = e.target.value;
+                            setFormData({ ...formData, sidebarMenu: newMenu });
+                          }}
+                          className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none"
+                        >
+                          <option value="none">No Badge</option>
+                          <option value="new">NEW</option>
+                          <option value="beta">BETA</option>
+                        </select>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={menuItem.isActive}
+                            onChange={(e) => {
+                              const newMenu = [...formData.sidebarMenu];
+                              newMenu[index].isActive = e.target.checked;
+                              setFormData({ ...formData, sidebarMenu: newMenu });
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                    {!menuItem.isActive && (
+                      <div className="w-full">
+                        <input
+                          type="text"
+                          placeholder="Inactive Message (e.g., 'Will be available very soon')"
+                          value={menuItem.message || ''}
+                          onChange={(e) => {
+                            const newMenu = [...formData.sidebarMenu];
+                            newMenu[index].message = e.target.value;
+                            setFormData({ ...formData, sidebarMenu: newMenu });
+                          }}
+                          className="w-full px-4 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
