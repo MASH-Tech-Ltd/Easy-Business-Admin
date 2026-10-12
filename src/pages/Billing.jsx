@@ -399,15 +399,45 @@ const Billing = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-blue-600">
-                        {sub.isTrial
-                          ? "Free Trial"
-                          : sub.packageId?.name || "Unknown Package"}
+                      <div className="font-semibold text-blue-600 flex items-center gap-1.5 flex-wrap">
+                        <span>
+                          {sub.isTrial
+                            ? "Free Trial"
+                            : sub.packageId?.name || "Unknown Package"}
+                        </span>
+                        {!sub.isTrial && sub.discountApplied && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            {sub.discountApplied.discountType === "fixed"
+                              ? `৳${sub.discountApplied.discountValue || sub.discountApplied.discountAmount} Off`
+                              : `${sub.discountApplied.discountValue}% Off`}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {sub.isTrial
-                          ? "Free / Trial period"
-                          : `$${sub.packageId?.price || 0} / ${sub.packageId?.billingCycle || "N/A"}`}
+                      <div className="text-xs text-slate-500 mt-1">
+                        {sub.isTrial ? (
+                          "Free / Trial period"
+                        ) : sub.discountApplied || (sub.paidAmount !== undefined && sub.paidAmount < (sub.originalPrice || sub.packageId?.price || 0)) ? (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="line-through text-slate-400">
+                                ৳{sub.originalPrice || sub.packageId?.price || 0}
+                              </span>
+                              <span className="font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                Paid: ৳{sub.paidAmount}
+                              </span>
+                              <span className="text-slate-400">
+                                / {sub.packageId?.billingCycle || "monthly"}
+                              </span>
+                            </div>
+                            {sub.discountApplied?.reason && (
+                              <span className="text-[10px] text-emerald-600 font-medium">
+                                ({sub.discountApplied.reason})
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          `৳${sub.paidAmount ?? sub.packageId?.price ?? 0} / ${sub.packageId?.billingCycle || "monthly"}`
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -577,6 +607,40 @@ const Billing = () => {
             </div>
 
             <form onSubmit={handleUpdate} className="p-6 space-y-4">
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Store:</span>
+                  <span className="font-bold text-slate-800">{editingSub.tenantId?.name || "N/A"}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Package:</span>
+                  <span className="font-bold text-blue-600">{editingSub.isTrial ? "Free Trial" : editingSub.packageId?.name || "N/A"}</span>
+                </div>
+                {!editingSub.isTrial && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-medium">Package Price:</span>
+                      <span className="font-semibold text-slate-700">৳{editingSub.originalPrice || editingSub.packageId?.price || 0}</span>
+                    </div>
+                    {editingSub.discountApplied && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-emerald-700 font-medium">Discount Applied:</span>
+                        <span className="font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px]">
+                          {editingSub.discountApplied.discountType === "fixed"
+                            ? `৳${editingSub.discountApplied.discountValue || editingSub.discountApplied.discountAmount} Off`
+                            : `${editingSub.discountApplied.discountValue}% Off`}
+                          {editingSub.discountApplied.reason ? ` (${editingSub.discountApplied.reason})` : ''}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                      <span className="text-slate-800 font-bold">User Paid Amount:</span>
+                      <span className="font-black text-sm text-emerald-600">৳{editingSub.paidAmount ?? editingSub.packageId?.price ?? 0}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
                   Status

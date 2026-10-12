@@ -22,6 +22,7 @@ import {
   Search,
   MessageSquare,
   Truck,
+  Gift,
 } from "lucide-react";
 
 const Badge = ({ children, type = "NEW" }) => (
@@ -263,6 +264,7 @@ export default function Sidebar() {
       items: [
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
+        { name: "Referral System", path: "/referrals", icon: Gift },
         {
           name: "Packages",
           icon: Package,

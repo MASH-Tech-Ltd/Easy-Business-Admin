@@ -28,6 +28,7 @@ const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const ContactInquiries = lazy(() => import("./pages/ContactInquiries"));
+const Referrals = lazy(() => import("./pages/Referrals"));
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
             <Route path="packages" element={<Packages />} />
             <Route path="clients" element={<Clients />} />
             <Route path="users" element={<Users />} />
+            <Route path="referrals" element={<Referrals />} />
             <Route path="health" element={<Health />} />
             <Route path="billing" element={<Billing />} />
             <Route path="addon-requests" element={<AddonRequests />} />
