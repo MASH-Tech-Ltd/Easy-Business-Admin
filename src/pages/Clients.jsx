@@ -433,15 +433,22 @@ export default function Clients() {
 
                     {/* Compact Expire Date display */}
                     {client.subscription?.endDate && (
-                      <span className={`text-[10px] font-medium flex items-center gap-1 ${
-                        new Date(client.subscription.endDate) < new Date()
-                          ? 'text-rose-600 font-semibold'
-                          : 'text-slate-400'
-                      }`}>
-                        <Calendar className="w-2.5 h-2.5 opacity-70" />
-                        {new Date(client.subscription.endDate) < new Date() ? 'Expired: ' : 'Exp: '}
-                        {new Date(client.subscription.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`text-[10px] font-medium flex items-center gap-1 ${
+                          new Date(client.subscription.endDate) < new Date()
+                            ? 'text-rose-600 font-semibold'
+                            : 'text-slate-400'
+                        }`}>
+                          <Calendar className="w-2.5 h-2.5 opacity-70" />
+                          {new Date(client.subscription.endDate) < new Date() ? 'Expired: ' : 'Exp: '}
+                          {new Date(client.subscription.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        {client.subscription?.isRenewed && client.subscription?.extendedEndDate && (
+                          <span className="text-[9px] font-bold text-purple-600 flex items-center gap-1">
+                            ✓ Extended to {new Date(client.subscription.extendedEndDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </td>
