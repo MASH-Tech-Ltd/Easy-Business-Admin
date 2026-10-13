@@ -81,7 +81,10 @@ export const adminApi = createApi({
 
     // Billing / Subscriptions
     getBillingOverview: builder.query({
-      query: () => '/billing/overview',
+      query: (params) => ({
+        url: '/billing/overview',
+        params,
+      }),
       providesTags: ['Billing'],
     }),
     getAllSubscriptions: builder.query({
