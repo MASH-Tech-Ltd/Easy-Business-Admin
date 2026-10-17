@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -45,7 +45,14 @@ export default function GlobalSettings() {
       { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
       { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
       { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
-    ]
+    ],
+    socialLinks: {
+      facebook: { url: '', isActive: true },
+      instagram: { url: '', isActive: true },
+      twitter: { url: '', isActive: true },
+      linkedin: { url: '', isActive: true },
+      youtube: { url: '', isActive: true },
+    },
   });
 
   const [themePreviews, setThemePreviews] = useState({
@@ -106,7 +113,14 @@ export default function GlobalSettings() {
             { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
             { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
             { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
-          ]
+          ],
+          socialLinks: data.socialLinks || {
+            facebook: { url: '', isActive: true },
+            instagram: { url: '', isActive: true },
+            twitter: { url: '', isActive: true },
+            linkedin: { url: '', isActive: true },
+            youtube: { url: '', isActive: true },
+          },
         });
         if (data.themePreviews) {
           setThemePreviews({
@@ -189,7 +203,7 @@ export default function GlobalSettings() {
       fetchPlatformTracking();
     } else if (activeTab === 'payments') {
       fetchPlatformPayments();
-    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers') {
+    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers' || activeTab === 'social') {
       fetchGlobalSettings();
     }
   }, [activeTab]);
@@ -562,6 +576,15 @@ export default function GlobalSettings() {
           >
             <Truck className={`w-5 h-5 ${activeTab === 'couriers' ? 'text-blue-600' : 'text-slate-400'}`} />
             Couriers Setup
+          </button>
+          <button 
+            onClick={() => setActiveTab('social')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'social' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Share2 className={`w-5 h-5 ${activeTab === 'social' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Social Media Links
           </button>
         </div>
 
@@ -1255,6 +1278,112 @@ export default function GlobalSettings() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'social' && (
+            <div className="p-8 space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">Footer Social Media Links</h2>
+                  <p className="text-slate-500 text-xs mt-1">
+                    Configure your platform official social links. Links will dynamically render on the landing page footer only when filled and enabled.
+                  </p>
+                </div>
+                <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200">
+                  Conditional Rendering Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5">
+                {[
+                  { id: 'facebook', name: 'Facebook', placeholder: 'https://facebook.com/masheco', color: 'text-blue-600 bg-blue-50 border-blue-200' },
+                  { id: 'instagram', name: 'Instagram', placeholder: 'https://instagram.com/masheco', color: 'text-pink-600 bg-pink-50 border-pink-200' },
+                  { id: 'twitter', name: 'Twitter / X', placeholder: 'https://twitter.com/masheco', color: 'text-slate-800 bg-slate-100 border-slate-300' },
+                  { id: 'linkedin', name: 'LinkedIn', placeholder: 'https://linkedin.com/company/masheco', color: 'text-sky-700 bg-sky-50 border-sky-200' },
+                  { id: 'youtube', name: 'YouTube', placeholder: 'https://youtube.com/@masheco', color: 'text-red-600 bg-red-50 border-red-200' },
+                ].map((platform) => {
+                  const current = formData.socialLinks?.[platform.id] || { url: '', isActive: true };
+                  const isConfigured = Boolean(current.url && current.url.trim() !== '' && current.url !== '#');
+
+                  return (
+                    <div 
+                      key={platform.id}
+                      className="p-5 border border-slate-200/80 rounded-2xl bg-white shadow-2xs hover:border-slate-300 transition-all"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1.5 rounded-xl font-bold text-xs border ${platform.color}`}>
+                            {platform.name}
+                          </span>
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                            isConfigured && current.isActive
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : isConfigured && !current.isActive
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {isConfigured && current.isActive ? '● Live in Footer' : isConfigured && !current.isActive ? '○ Disabled' : '○ Not Configured (Hidden)'}
+                          </span>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={current.isActive}
+                            onChange={(e) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                socialLinks: {
+                                  ...prev.socialLinks,
+                                  [platform.id]: {
+                                    ...current,
+                                    isActive: e.target.checked,
+                                  },
+                                },
+                              }));
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <span className="ml-2 text-xs font-medium text-slate-600">
+                            {current.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Profile / Page URL</label>
+                        <input
+                          type="url"
+                          placeholder={platform.placeholder}
+                          value={current.url}
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              socialLinks: {
+                                ...prev.socialLinks,
+                                [platform.id]: {
+                                  ...current,
+                                  url: e.target.value,
+                                },
+                              },
+                            }));
+                          }}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-3 text-xs text-blue-900 leading-relaxed">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Conditional Rendering:</strong> If an input field is empty, or if the toggle switch is turned off, that specific social icon/link will automatically not be rendered on the landing page footer.
+                </div>
+              </div>
             </div>
           )}
         </div>
