@@ -117,7 +117,11 @@ export default function Database() {
             Primary cluster monitoring, secondary database replication, and local archives.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-slate-500 bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center gap-1.5 font-medium shadow-sm">
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <span>Schedule: <strong className="text-slate-700">Every 12 Hours</strong></span>
+          </span>
           <button
             onClick={handleRefreshAll}
             className="bg-white border border-slate-200 px-3.5 py-2 rounded-lg text-sm font-medium text-slate-700 flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm"
@@ -183,7 +187,7 @@ export default function Database() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Collections</span>
               <Layers className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold text-slate-800">{primaryStats?.collections ?? 26}</p>
+            <p className="text-2xl font-bold text-slate-800">{primaryStats?.collections ?? "00"}</p>
             <p className="text-xs text-slate-400 mt-1">Active database collections</p>
           </div>
 
@@ -263,11 +267,11 @@ export default function Database() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Replicated Collections</span>
               <Layers className="w-4 h-4 text-indigo-500" />
             </div>
-            <p className="text-2xl font-bold text-slate-800">{backupStats?.collections ?? primaryStats?.collections ?? 26}</p>
+            <p className="text-2xl font-bold text-slate-800">{backupStats?.collections ?? "00"}</p>
             <p className="text-xs text-slate-400 mt-1">
-              {backupStats?.collections === primaryStats?.collections
-                ? 'All 26 collections replicated'
-                : `${backupStats?.collections || 0} / ${primaryStats?.collections || 26} collections`}
+              {backupStats?.collections === primaryStats?.collections && backupStats?.collections > 0
+                ? `All ${backupStats.collections} collections replicated`
+                : `${backupStats?.collections || 0} / ${primaryStats?.collections || 31} collections`}
             </p>
           </div>
 
