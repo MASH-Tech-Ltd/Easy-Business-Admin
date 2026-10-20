@@ -157,10 +157,25 @@ export const adminApi = createApi({
       providesTags: ['AddonRequests'],
     }),
 
-    // System
+    // System & Database
     getDatabaseStats: builder.query({
       query: () => '/system/database',
       providesTags: ['Database'],
+    }),
+    getBackupFiles: builder.query({
+      query: () => '/system/database/backup-files',
+      providesTags: ['Database'],
+    }),
+    getBackupLogs: builder.query({
+      query: () => '/system/database/backup-logs',
+      providesTags: ['Database'],
+    }),
+    triggerDatabaseSync: builder.mutation({
+      query: () => ({
+        url: '/system/database/sync',
+        method: 'POST',
+      }),
+      invalidatesTags: ['Database'],
     }),
     getSystemHealth: builder.query({
       query: () => '/system/health',
@@ -204,6 +219,9 @@ export const {
   useGetPredefinedAddonsQuery,
   useGetAddonRequestsQuery,
   useGetDatabaseStatsQuery,
+  useGetBackupFilesQuery,
+  useGetBackupLogsQuery,
+  useTriggerDatabaseSyncMutation,
   useGetSystemHealthQuery,
   useGetBlockedIpsQuery,
   useGetSecurityLogsQuery,
