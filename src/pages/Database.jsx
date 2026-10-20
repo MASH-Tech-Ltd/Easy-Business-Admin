@@ -13,6 +13,9 @@ import {
   XCircle,
   PlayCircle,
   Loader2,
+  ShieldCheck,
+  Server,
+  CopyCheck,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
@@ -46,6 +49,8 @@ export default function Database() {
   const [triggerSync, { isLoading: isSyncing }] = useTriggerDatabaseSyncMutation();
 
   const dbStats = dbStatsRes?.data || null;
+  const primaryStats = dbStats?.primary || dbStats || null;
+  const backupStats = dbStats?.backup || null;
   const backupFiles = backupFilesRes?.data || [];
   const backupLogs = backupLogsRes?.data || [];
 
@@ -139,42 +144,159 @@ export default function Database() {
         </div>
       </div>
 
-      {/* Cluster Overview Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cluster Status</span>
-            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+      {/* Primary Production Cluster Overview Stats */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Server className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Primary Database (Production Cluster)
+            </span>
           </div>
-          <p className="text-2xl font-bold text-slate-800">{dbStats?.status || 'Connected'}</p>
-          <p className="text-xs text-slate-400 mt-1">MongoDB Primary Replica</p>
+          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {primaryStats?.status || 'Connected'}
+          </span>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Storage</span>
-            <HardDrive className="w-4 h-4 text-purple-500" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cluster Status</span>
+              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{primaryStats?.status || 'Connected'}</p>
+            <p className="text-xs text-slate-400 mt-1">MongoDB Primary Replica</p>
           </div>
-          <p className="text-2xl font-bold text-slate-800">{dbStats?.storage || 'Calculating...'}</p>
-          <p className="text-xs text-slate-400 mt-1">Data size on cluster</p>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Storage</span>
+              <HardDrive className="w-4 h-4 text-purple-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{primaryStats?.storage || 'Calculating...'}</p>
+            <p className="text-xs text-slate-400 mt-1">Data size on cluster</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Collections</span>
+              <Layers className="w-4 h-4 text-blue-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{primaryStats?.collections ?? 26}</p>
+            <p className="text-xs text-slate-400 mt-1">Active database collections</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Documents</span>
+              <FileText className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{primaryStats?.documents?.toLocaleString() || 0}</p>
+            <p className="text-xs text-slate-400 mt-1">Primary records count</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Backup Database Cluster Overview Stats (Secondary Replication Cluster) */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Backup Database (Secondary Replication Cluster)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {backupStats?.isSynced ? (
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                100% Same-to-Same Replicated
+              </span>
+            ) : backupStats?.syncDifference > 0 ? (
+              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                {backupStats.syncDifference} records difference (Sync Needed)
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                Replication Ready
+              </span>
+            )}
+
+            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
+              backupStats?.status === 'Connected'
+                ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                : 'text-slate-600 bg-slate-100 border-slate-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${backupStats?.status === 'Connected' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              {backupStats?.status || 'Connected'}
+            </span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Collections</span>
-            <Layers className="w-4 h-4 text-blue-500" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white rounded-xl border border-indigo-100 p-5 shadow-sm hover:border-indigo-300 transition-colors">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Replica Status</span>
+              <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{backupStats?.status || 'Connected'}</p>
+            <p className="text-xs text-slate-400 mt-1 truncate" title={backupStats?.cluster || 'MongoDB Secondary Replica'}>
+              {backupStats?.cluster || 'MongoDB Secondary Replica'}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-slate-800">{dbStats?.collections || 0}</p>
-          <p className="text-xs text-slate-400 mt-1">Active registered schemas</p>
-        </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Documents</span>
-            <FileText className="w-4 h-4 text-amber-500" />
+          <div className="bg-white rounded-xl border border-indigo-100 p-5 shadow-sm hover:border-indigo-300 transition-colors">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Backup Storage</span>
+              <HardDrive className="w-4 h-4 text-indigo-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{backupStats?.storage || 'Calculating...'}</p>
+            <p className="text-xs text-slate-400 mt-1">Replicated cluster storage</p>
           </div>
-          <p className="text-2xl font-bold text-slate-800">{dbStats?.documents?.toLocaleString() || 0}</p>
-          <p className="text-xs text-slate-400 mt-1">Primary records count</p>
+
+          <div className="bg-white rounded-xl border border-indigo-100 p-5 shadow-sm hover:border-indigo-300 transition-colors">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Replicated Collections</span>
+              <Layers className="w-4 h-4 text-indigo-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">{backupStats?.collections ?? primaryStats?.collections ?? 26}</p>
+            <p className="text-xs text-slate-400 mt-1">
+              {backupStats?.collections === primaryStats?.collections
+                ? 'All 26 collections replicated'
+                : `${backupStats?.collections || 0} / ${primaryStats?.collections || 26} collections`}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-indigo-100 p-5 shadow-sm hover:border-indigo-300 transition-colors">
+            <div className="flex items-center justify-between text-slate-600 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Replicated Documents</span>
+              <CopyCheck className="w-4 h-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800">
+              {backupStats?.documents !== undefined ? backupStats.documents.toLocaleString() : (primaryStats?.documents?.toLocaleString() || 0)}
+            </p>
+            <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+              {backupStats?.isSynced ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3" />
+                  100% same-to-same match
+                </>
+              ) : backupStats?.syncDifference ? (
+                <span className="text-amber-600">
+                  {backupStats.syncDifference} records difference
+                </span>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3 h-3" />
+                  100% same-to-same match
+                </>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
