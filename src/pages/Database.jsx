@@ -221,7 +221,7 @@ export default function Database() {
             ) : backupStats?.syncDifference > 0 ? (
               <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                {backupStats.syncDifference} records difference (Sync Needed)
+                {backupStats.syncDifference} record diff {backupStats?.missingCollections?.length ? `(${backupStats.missingCollections.join(', ')})` : ''}
               </span>
             ) : (
               <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">

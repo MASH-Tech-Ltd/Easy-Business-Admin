@@ -66,11 +66,11 @@ export default function Health() {
 
         <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group lg:col-span-2">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <HardDrive className="w-16 h-16 text-emerald-600" />
+            <Activity className="w-16 h-16 text-emerald-600" />
           </div>
           <div className="flex items-center gap-3 mb-4 text-slate-600">
-            <HardDrive className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-semibold text-sm">Memory Allocation</h3>
+            <Activity className="w-5 h-5 text-emerald-600" />
+            <h3 className="font-semibold text-sm">Memory Allocation (RAM)</h3>
           </div>
           <p className="text-3xl font-bold text-slate-800 tracking-tight">{healthData?.memory || '---'}</p>
           
@@ -90,6 +90,38 @@ export default function Health() {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group lg:col-span-2">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <HardDrive className="w-16 h-16 text-cyan-600" />
+          </div>
+          <div className="flex items-center gap-3 mb-4 text-slate-600">
+            <HardDrive className="w-5 h-5 text-cyan-600" />
+            <h3 className="font-semibold text-sm">Server Disk Storage</h3>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-bold text-slate-800 tracking-tight">
+              {healthData?.disk?.free || healthData?.diskFree || '---'}
+            </p>
+            <span className="text-sm font-medium text-slate-500">
+              Free / {healthData?.disk?.total || healthData?.diskTotal || '---'} Total
+            </span>
+          </div>
+          
+          <div className="mt-5 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+            <div 
+              className={`h-2.5 rounded-full transition-all duration-1000 ${
+                (healthData?.disk?.percent || healthData?.diskPercent || 0) > 85 ? 'bg-red-500' : 
+                (healthData?.disk?.percent || healthData?.diskPercent || 0) > 70 ? 'bg-amber-500' : 'bg-cyan-500'
+              }`}
+              style={{ width: `${healthData?.disk?.percent || healthData?.diskPercent || 0}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between items-center mt-2 text-xs font-medium text-slate-500">
+            <span>Used: {healthData?.disk?.used || healthData?.diskUsed || '---'}</span>
+            <span className="font-semibold text-slate-600">{healthData?.disk?.percent || healthData?.diskPercent || 0}% Utilized</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group lg:col-span-4">
            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Wifi className="w-16 h-16 text-amber-600" />
           </div>
@@ -97,15 +129,30 @@ export default function Health() {
             <Wifi className="w-5 h-5 text-amber-600" />
             <h3 className="font-semibold text-sm">Network Configuration</h3>
           </div>
-          <div className="flex items-center gap-8">
+          <div className="flex flex-wrap items-center gap-8 md:gap-16">
             <div>
-              <p className="text-3xl font-bold text-slate-800 tracking-tight">{healthData?.ipAddress ? '***.***.***.***' : '---'}</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{healthData?.ipAddress ? '***.***.***.***' : '---'}</p>
               <p className="text-xs text-slate-500 mt-1 font-medium">Internal IP Address</p>
             </div>
-            <div className="h-12 w-px bg-slate-200"></div>
+            <div className="h-10 w-px bg-slate-200 hidden sm:block"></div>
             <div>
-              <p className="text-xl font-bold text-slate-800 tracking-tight">{healthData?.hostname ? '********' : '---'}</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{healthData?.hostname ? '********' : '---'}</p>
               <p className="text-xs text-slate-500 mt-1 font-medium">Hostname</p>
+            </div>
+            <div className="h-10 w-px bg-slate-200 hidden sm:block"></div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{healthData?.latency || 'Real-time'}</p>
+              <p className="text-xs text-slate-500 mt-1 font-medium">Network Latency</p>
+            </div>
+            <div className="h-10 w-px bg-slate-200 hidden sm:block"></div>
+            <div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                  Active & Secured
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 font-medium">Connection Status</p>
             </div>
           </div>
         </div>
