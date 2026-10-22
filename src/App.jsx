@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AdminLayout from "./components/layout/AdminLayout";
@@ -8,7 +8,6 @@ const Overview = lazy(() => import("./pages/Overview"));
 const Packages = lazy(() => import("./pages/Packages"));
 const Clients = lazy(() => import("./pages/Clients"));
 const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
 const Health = lazy(() => import("./pages/Health"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Logs = lazy(() => import("./pages/Logs"));
@@ -41,7 +40,6 @@ function App() {
       }>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route
             path="/"
             element={
@@ -73,6 +71,7 @@ function App() {
             <Route path="settings" element={<GlobalSettings />} />
             <Route path="notifications" element={<Notifications />} />
           </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
     </>

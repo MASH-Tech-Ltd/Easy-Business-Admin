@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, ShieldAlert, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
@@ -269,14 +269,8 @@ export default function Login() {
           )}
           
           <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-xs text-slate-500">
               Only authorized administrators may access this portal.
-            </p>
-            <p className="text-sm text-slate-400">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
-                Setup Admin
-              </Link>
             </p>
           </div>
         </div>
