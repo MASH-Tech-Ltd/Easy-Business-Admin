@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../utils/api";
@@ -28,6 +28,12 @@ import {
   TrendingUp,
   BarChart3,
   X,
+  Mail,
+  MailCheck,
+  Send,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useSocket } from "../context/SocketContext";
 import { useGetAllPaymentSubmissionsQuery } from "../store/apiSlice";
@@ -129,6 +135,128 @@ export default function PaymentVerifications() {
       adminFeedback: "",
     });
   };
+
+  // Email sending state & handler
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+
+  const handleSendEmail = async (payment) => {
+    if (!payment || !payment._id) return;
+    try {
+      setSendingEmailId(payment._id);
+      const res = await api.post(
+        `/billing/payments/${payment._id}/send-confirmation-email`
+      );
+      const sentTo = res.data?.data?.sentTo ? ` to ${res.data.data.sentTo}` : "";
+      toast.success(res.data?.message || `Confirmation email sent${sentTo}!`);
+      fetchPayments();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to send confirmation email"
+      );
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  // Delete modal state & 3-second hold handler
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    payment: null,
+  });
+  const [deleteHoldProgress, setDeleteHoldProgress] = useState(0); // 0 to 100
+  const [isHolding, setIsHolding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const holdTimerRef = useRef(null);
+  const holdStartRef = useRef(null);
+
+  const openDeleteModal = (payment) => {
+    setDeleteModal({
+      isOpen: true,
+      payment,
+    });
+    setDeleteHoldProgress(0);
+    setIsHolding(false);
+    setIsDeleting(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setDeleteModal({
+      isOpen: false,
+      payment: null,
+    });
+    setDeleteHoldProgress(0);
+    setIsHolding(false);
+    setIsDeleting(false);
+  };
+
+  const executeDelete = async (paymentId) => {
+    try {
+      setIsDeleting(true);
+      const res = await api.delete(`/billing/payments/${paymentId}`);
+      toast.success(
+        res.data?.message || "Payment history deleted successfully"
+      );
+      closeDeleteModal();
+      fetchPayments();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to delete payment history"
+      );
+      setIsDeleting(false);
+      setDeleteHoldProgress(0);
+    }
+  };
+
+  const handleHoldStart = (e) => {
+    if (e && e.type === "touchstart") {
+      // touch event
+    }
+    if (isDeleting || !deleteModal.payment) return;
+
+    setIsHolding(true);
+    holdStartRef.current = Date.now();
+    const duration = 3000; // 3 seconds
+
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+    }
+
+    holdTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - holdStartRef.current;
+      const progress = Math.min(100, (elapsed / duration) * 100);
+      setDeleteHoldProgress(progress);
+
+      if (elapsed >= duration) {
+        clearInterval(holdTimerRef.current);
+        holdTimerRef.current = null;
+        setIsHolding(false);
+        setDeleteHoldProgress(100);
+        executeDelete(deleteModal.payment._id);
+      }
+    }, 20);
+  };
+
+  const handleHoldEnd = () => {
+    if (isDeleting) return;
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setIsHolding(false);
+    setDeleteHoldProgress(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        clearInterval(holdTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
@@ -869,7 +997,45 @@ export default function PaymentVerifications() {
                     </td>
 
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        {/* Send Confirmation Email Button (When Approved) */}
+                        {p.status === "approved" && (
+                          <button
+                            onClick={() => handleSendEmail(p)}
+                            disabled={sendingEmailId === p._id}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 ${
+                              (p.confirmationEmailSentCount || 0) > 0
+                                ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
+                                : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200"
+                            } disabled:opacity-50`}
+                            title={
+                              (p.confirmationEmailSentCount || 0) > 0
+                                ? `Confirmation email sent ${p.confirmationEmailSentCount} time(s). Click to send again.`
+                                : "Send payment confirmation email to merchant"
+                            }
+                          >
+                            {sendingEmailId === p._id ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                                <span>Sending...</span>
+                              </>
+                            ) : (p.confirmationEmailSentCount || 0) > 0 ? (
+                              <>
+                                <MailCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Sent Again</span>
+                                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-800">
+                                  {p.confirmationEmailSentCount}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Send Email</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+
                         {p.status === "pending" ? (
                           <>
                             <button
@@ -895,11 +1061,20 @@ export default function PaymentVerifications() {
                                   : "approved",
                               )
                             }
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs transition-all"
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs transition-all"
                           >
                             Change Status
                           </button>
                         )}
+
+                        {/* Delete Payment History Button */}
+                        <button
+                          onClick={() => openDeleteModal(p)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all"
+                          title="Delete payment history"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1082,6 +1257,158 @@ export default function PaymentVerifications() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal with 3-Second Press & Hold */}
+      {deleteModal.isOpen && deleteModal.payment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-100 space-y-5 animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Delete Payment History
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Irreversible administrative deletion
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Store:</span>
+                <span className="font-bold text-slate-900">
+                  {deleteModal.payment.tenantId?.name || "Unknown Store"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Purpose:</span>
+                <span className="font-bold text-slate-800">
+                  {deleteModal.payment.purposeTitle || deleteModal.payment.purpose}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Transaction ID:</span>
+                <span className="font-mono font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  {deleteModal.payment.transactionId}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Sender:</span>
+                <span className="font-mono text-slate-700">
+                  {deleteModal.payment.senderNumber} ({deleteModal.payment.provider})
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Amount:</span>
+                <span className="font-bold text-emerald-600 text-sm">
+                  ৳ {Number(deleteModal.payment.amount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-slate-200 pt-1.5">
+                <span className="text-slate-500 font-medium">Status:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                    deleteModal.payment.status === "approved"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : deleteModal.payment.status === "rejected"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {deleteModal.payment.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-red-700">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <span>
+                <strong>Warning:</strong> To prevent accidental deletion, you must <strong>press and hold the button below for 3 seconds</strong>. Releasing before 3s will cancel the action.
+              </span>
+            </div>
+
+            {/* 3-Second Press & Hold Button */}
+            <div className="space-y-2">
+              <div
+                role="button"
+                tabIndex={0}
+                onMouseDown={handleHoldStart}
+                onMouseUp={handleHoldEnd}
+                onMouseLeave={handleHoldEnd}
+                onTouchStart={handleHoldStart}
+                onTouchEnd={handleHoldEnd}
+                onContextMenu={(e) => e.preventDefault()}
+                className={`relative w-full rounded-xl overflow-hidden cursor-pointer select-none transition-all flex items-center justify-center border-2 ${
+                  isHolding
+                    ? "border-red-600 shadow-lg shadow-red-500/25 scale-[0.99]"
+                    : "border-red-300 hover:border-red-500 bg-red-50/50"
+                }`}
+                style={{ height: "54px" }}
+              >
+                {/* Background Progress Fill */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 transition-all ease-linear"
+                  style={{
+                    width: `${deleteHoldProgress}%`,
+                    transitionDuration: isHolding ? "20ms" : "200ms",
+                  }}
+                />
+
+                {/* Content Overlay */}
+                <div className="relative z-10 flex items-center justify-center gap-2 font-bold text-sm tracking-wide">
+                  {isDeleting ? (
+                    <div className="flex items-center gap-2 text-white">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Deleting Record...</span>
+                    </div>
+                  ) : isHolding ? (
+                    <div className="flex items-center gap-2 text-white drop-shadow-md">
+                      <Clock className="w-4 h-4 animate-spin" />
+                      <span>
+                        Holding... {Math.max(0, (3 - (deleteHoldProgress / 100) * 3)).toFixed(1)}s (
+                        {Math.round(deleteHoldProgress)}%)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-red-700">
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <span>Press &amp; Hold to Delete (3s)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-1">
+                <span>Hold down mouse or touch for 3 seconds</span>
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleting}
+                  className="text-slate-500 hover:text-slate-800 font-semibold underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
