@@ -315,7 +315,7 @@ export default function Referrals() {
                 Referral System & Rewards
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-                Manage promo codes, merchant point rewards (20 pts = ৳20 when subscription is purchased), and withdrawal payouts.
+                Manage promo codes, merchant point rewards (100 pts = ৳100 for 1-yr plan, 20 pts = ৳20 monthly), and withdrawal payouts.
               </p>
             </div>
           </div>
@@ -400,9 +400,9 @@ export default function Referrals() {
               Per Subscription
             </p>
             <h3 className="text-lg xs:text-xl sm:text-2xl font-bold text-amber-600 mt-0.5 xs:mt-1 truncate">
-              20 Pts (৳20)
+              20 - 100 Pts
             </h3>
-            <span className="text-[10px] xs:text-xs text-amber-600/80 mt-0.5 inline-block truncate">Convert to Taka</span>
+            <span className="text-[10px] xs:text-xs text-amber-600/80 mt-0.5 inline-block truncate">100 pts 1-yr / 20 pts mo</span>
           </div>
           <div className="p-2 xs:p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0 ml-1.5">
             <Coins className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
