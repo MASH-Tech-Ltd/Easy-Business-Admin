@@ -264,6 +264,41 @@ export default function Blogs() {
     }
   };
 
+  const [seedLoading, setSeedLoading] = useState(false);
+
+  const handleAutoSeed = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to auto-seed default blog articles? This will populate the database with the official curated guides."
+      )
+    ) {
+      return;
+    }
+
+    setSeedLoading(true);
+    const toastId = toast.loading("Seeding default blog articles to database...");
+    try {
+      const res = await api.post("/blogs/seed-blogs?force=true", { force: true });
+      toast.update(toastId, {
+        render: res.data?.message || "Default blogs seeded successfully!",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+      fetchBlogs(1);
+    } catch (err) {
+      console.error("Failed to seed blogs:", err);
+      toast.update(toastId, {
+        render: err.response?.data?.message || "Failed to seed default blogs",
+        type: "error",
+        isLoading: false,
+        autoClose: 4000,
+      });
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
   const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
   const totalPublished = blogs.filter((b) => b.isPublished).length;
   const totalDrafts = blogs.filter((b) => !b.isPublished).length;
@@ -286,13 +321,29 @@ export default function Blogs() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all select-none"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Write New Article</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleAutoSeed}
+            disabled={seedLoading}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-sm shadow-xs transition-all disabled:opacity-60 cursor-pointer select-none"
+            title="Auto seed official default blog articles into the database"
+          >
+            {seedLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+            ) : (
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+            )}
+            <span>{seedLoading ? "Seeding..." : "Auto Seed Blogs"}</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all select-none cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Write New Article</span>
+          </button>
+        </div>
       </div>
 
       {/* Overview Stats */}
