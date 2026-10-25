@@ -28,6 +28,7 @@ const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const ContactInquiries = lazy(() => import("./pages/ContactInquiries"));
 const Referrals = lazy(() => import("./pages/Referrals"));
+const Blogs = lazy(() => import("./pages/Blogs"));
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
             <Route path="contact-inquiries" element={<ContactInquiries />} />
             <Route path="leads" element={<ContactInquiries />} />
             <Route path="profile" element={<AdminProfile />} />
+            <Route path="blogs" element={<Blogs />} />
             <Route path="settings" element={<GlobalSettings />} />
             <Route path="notifications" element={<Notifications />} />
           </Route>

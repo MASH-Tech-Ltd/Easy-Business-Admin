@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Truck,
   Gift,
+  BookOpen,
 } from "lucide-react";
 
 const Badge = ({ children, type = "NEW" }) => (
@@ -321,6 +322,11 @@ export default function Sidebar() {
           path: "/contact-inquiries",
           icon: Users,
           badge: formatBadge(pendingLeadsCount),
+        },
+        {
+          name: "Blog Posts",
+          path: "/blogs",
+          icon: BookOpen,
         },
       ],
     },
