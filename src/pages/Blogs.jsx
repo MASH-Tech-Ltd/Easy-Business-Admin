@@ -832,8 +832,16 @@ export default function Blogs() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setFormData({ ...formData, thumbnail: "" })}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                              onClick={async () => {
+                                const prevUrl = formData.thumbnail;
+                                setFormData({ ...formData, thumbnail: "" });
+                                if (prevUrl && prevUrl.includes("cloudinary.com")) {
+                                  try {
+                                    await api.post("/blogs/delete-image", { url: prevUrl });
+                                  } catch (e) {}
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             >
                               Remove
                             </button>
