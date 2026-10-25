@@ -67,6 +67,7 @@ function App() {
             <Route path="support" element={<SupportList />} />
             <Route path="support/:id" element={<SupportDetails />} />
             <Route path="contact-inquiries" element={<ContactInquiries />} />
+            <Route path="leads" element={<ContactInquiries />} />
             <Route path="profile" element={<AdminProfile />} />
             <Route path="settings" element={<GlobalSettings />} />
             <Route path="notifications" element={<Notifications />} />

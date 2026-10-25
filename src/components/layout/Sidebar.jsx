@@ -149,17 +149,19 @@ export default function Sidebar() {
   const [pendingSubscriptionsCount, setPendingSubscriptionsCount] = useState(0);
   const [pendingAddonRequestsCount, setPendingAddonRequestsCount] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const { socket } = useSocket();
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [ticketsRes, subsRes, addonsRes, paymentsRes] =
+        const [ticketsRes, subsRes, addonsRes, paymentsRes, leadsRes] =
           await Promise.allSettled([
             api.get("/support/all-tickets"),
             api.get("/subscriptions/get-all-subscriptions?status=pending"),
             api.get("/subscriptions/addons/requests?status=pending"),
             api.get("/billing/all-payments?status=pending"),
+            api.get("/contact-inquiries/stats"),
           ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
@@ -212,6 +214,11 @@ export default function Sidebar() {
                 : dataArr.length;
           setPendingPaymentsCount(count);
         }
+
+        if (leadsRes.status === "fulfilled" && leadsRes.value.data) {
+          const stats = leadsRes.value.data?.data || leadsRes.value.data;
+          setPendingLeadsCount(stats?.pendingLeads || 0);
+        }
       } catch (err) {}
     };
 
@@ -230,18 +237,26 @@ export default function Sidebar() {
       setPendingSubscriptionsCount((prev) => prev + 1);
     };
 
+    const handleNewLead = () => {
+      setPendingLeadsCount((prev) => prev + 1);
+    };
+
     socket.on("new_notification", handleNewNotification);
     socket.on("new_ticket", handleNewTicket);
     socket.on("new_subscription", handleNewSubscription);
+    socket.on("new_inquiry", handleNewLead);
     socket.on("refresh_tickets", fetchCounts);
     socket.on("refresh_subscriptions", fetchCounts);
+    socket.on("refresh_inquiries", fetchCounts);
 
     return () => {
       socket.off("new_notification", handleNewNotification);
       socket.off("new_ticket", handleNewTicket);
       socket.off("new_subscription", handleNewSubscription);
+      socket.off("new_inquiry", handleNewLead);
       socket.off("refresh_tickets", fetchCounts);
       socket.off("refresh_subscriptions", fetchCounts);
+      socket.off("refresh_inquiries", fetchCounts);
     };
   }, [socket]);
 
@@ -302,9 +317,10 @@ export default function Sidebar() {
           badge: formatBadge(openTicketsCount),
         },
         {
-          name: "Contact Inquiries",
+          name: "Merchant Leads",
           path: "/contact-inquiries",
-          icon: MessageSquare,
+          icon: Users,
+          badge: formatBadge(pendingLeadsCount),
         },
       ],
     },
