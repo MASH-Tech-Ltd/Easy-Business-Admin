@@ -1,5 +1,6 @@
 import {
   CreditCard,
+  Mail,
   DollarSign,
   Clock,
   Check,
@@ -36,6 +37,24 @@ import {
 import React from "react";
 
 const Billing = () => {
+  const [sendingExpiryWarnings, setSendingExpiryWarnings] = useState(false);
+
+  const handleTriggerExpiryWarnings = async () => {
+    setSendingExpiryWarnings(true);
+    try {
+      const res = await api.post("/subscriptions/trigger-expiry-reminders");
+      toast.success(
+        res.data?.message || "Expiry reminders triggered successfully!"
+      );
+      if (typeof refetchSubs === "function") refetchSubs();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to trigger expiry reminders"
+      );
+    } finally {
+      setSendingExpiryWarnings(false);
+    }
+  };
   const [activeTab, setActiveTab] = useState("subscriptions"); // 'subscriptions' | 'paymentSubmissions'
   const [actionLoading, setActionLoading] = useState(null);
   const [page, setPage] = useState(1);
@@ -638,6 +657,9 @@ const Billing = () => {
                 className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
+                <option value="warning_sent">✉️ Warning Sent</option>
+                <option value="warning_not_sent">⏳ Not Sent Yet (Scheduled)</option>
+                <option value="expiring_soon">⚠️ Expiring Soon (&lt; 2d)</option>
                 <option value="pending">Pending</option>
                 <option value="active">Active</option>
                 <option value="cancelled">Cancelled</option>
@@ -820,13 +842,68 @@ const Billing = () => {
                         : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                      {sub.endDate
-                        ? new Date(sub.endDate).toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "-"}
+                      <div className="font-semibold text-slate-800">
+                        {sub.endDate
+                          ? new Date(sub.endDate).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "-"}
+                      </div>
+                      <div className="mt-1">
+                        {sub.expiryWarningSent ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"
+                            title={
+                              sub.expiryWarningSentAt
+                                ? `Email & Notification Sent: ${new Date(sub.expiryWarningSentAt).toLocaleString()}`
+                                : "Expiry warning notification sent"
+                            }
+                          >
+                            <Mail className="w-3 h-3 text-emerald-600" />
+                            <span>Warning Sent</span>
+                            {sub.expiryWarningSentAt && (
+                              <span className="text-[10px] text-emerald-600/80">
+                                ({new Date(sub.expiryWarningSentAt).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                })})
+                              </span>
+                            )}
+                          </span>
+                        ) : sub.status === "active" ? (
+                          (() => {
+                            const now = new Date();
+                            const end = sub.endDate ? new Date(sub.endDate) : null;
+                            const diffHours = end ? (end - now) / (1000 * 60 * 60) : 999;
+                            if (diffHours > 0 && diffHours <= 48) {
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full animate-pulse"
+                                  title="Expiring within 48h! Auto reminder will be sent soon."
+                                >
+                                  <Clock className="w-3 h-3 text-amber-600" />
+                                  <span>Expiring in &lt; 2d (Pending)</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full"
+                                title="Not sent yet. Will automatically be sent 2 days before expiration date."
+                              >
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>Not Sent Yet</span>
+                              </span>
+                            );
+                          })()
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                            <span>Not Sent</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       {sub.status === "pending" ? (
