@@ -27,8 +27,8 @@ import { useGetAllPackagesQuery } from "../store/apiSlice";
 const STANDARD_PRESETS = {
   basic: [
     "Up to 199 Products Capacity",
-    "Courier Automation: 5 Free Orders / Month",
-    "Abandoned Checkout: 5 Free Leads / Month",
+    "Courier Automation: 29 Free Orders / Month",
+    "Abandoned Checkout: 59 Free Leads / Month",
     "Online Storefront & All 5 Modern Themes",
     "Mash Eco Subdomain & Custom Domain",
     "Cash on Delivery (COD) & Manual Payments",
@@ -43,8 +43,8 @@ const STANDARD_PRESETS = {
   ],
   standard: [
     "Up to 399 Products (2x Capacity)",
-    "Courier Automation: 10 Free Orders / Month (2x)",
-    "Abandoned Checkout: 10 Free Leads / Month (2x)",
+    "Courier Automation: 49 Free Orders / Month",
+    "Abandoned Checkout: 99 Free Leads / Month",
     "Online Storefront & All 5 Modern Themes",
     "Mash Eco Subdomain & Custom Domain",
     "Cash on Delivery (COD) & Manual Payments",
@@ -59,8 +59,8 @@ const STANDARD_PRESETS = {
   ],
   premium: [
     "Up to 1,500 Products (Maximum Catalog Size)",
-    "Courier Automation: 15 Free Orders / Month (3x Volume)",
-    "Abandoned Checkout: 15 Free Leads / Month (3x Volume)",
+    "Courier Automation: 79 Free Orders / Month",
+    "Abandoned Checkout: 159 Free Leads / Month",
     "Online Storefront & All 5 Modern Themes",
     "Mash Eco Subdomain & Custom Domain",
     "Cash on Delivery (COD) & Manual Payments",
