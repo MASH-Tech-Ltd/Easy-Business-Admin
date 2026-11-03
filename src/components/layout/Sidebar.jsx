@@ -151,18 +151,20 @@ export default function Sidebar() {
   const [pendingAddonRequestsCount, setPendingAddonRequestsCount] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
+  const [pendingAffiliateWithdrawals, setPendingAffiliateWithdrawals] = useState(0);
   const { socket } = useSocket();
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [ticketsRes, subsRes, addonsRes, paymentsRes, leadsRes] =
+        const [ticketsRes, subsRes, addonsRes, paymentsRes, leadsRes, affRes] =
           await Promise.allSettled([
             api.get("/support/all-tickets"),
             api.get("/subscriptions/get-all-subscriptions?status=pending"),
             api.get("/subscriptions/addons/requests?status=pending"),
             api.get("/billing/all-payments?status=pending"),
             api.get("/contact-inquiries/stats"),
+            api.get("/affiliates/admin/overview"),
           ]);
 
         if (ticketsRes.status === "fulfilled" && ticketsRes.value.data?.data) {
@@ -219,6 +221,12 @@ export default function Sidebar() {
         if (leadsRes.status === "fulfilled" && leadsRes.value.data) {
           const stats = leadsRes.value.data?.data || leadsRes.value.data;
           setPendingLeadsCount(stats?.pendingLeads || 0);
+        }
+
+        if (affRes.status === "fulfilled" && affRes.value?.data?.data) {
+          setPendingAffiliateWithdrawals(
+            affRes.value.data.data.pendingWithdrawalRequests || 0,
+          );
         }
       } catch (err) {}
     };
@@ -280,6 +288,12 @@ export default function Sidebar() {
       items: [
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
+        {
+          name: "Affiliate Partners",
+          path: "/affiliates",
+          icon: Gift,
+          badge: formatBadge(pendingAffiliateWithdrawals),
+        },
         { name: "Referral System", path: "/referrals", icon: Gift },
         {
           name: "Packages",

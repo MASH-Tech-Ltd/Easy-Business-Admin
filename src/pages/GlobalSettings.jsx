@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -7,6 +7,7 @@ import ConfirmModal from '../components/ConfirmModal';
 
 export default function GlobalSettings() {
   const [activeTab, setActiveTab] = useState('general');
+  const [affLang, setAffLang] = useState('en');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTracking, setIsLoadingTracking] = useState(false);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
@@ -52,6 +53,35 @@ export default function GlobalSettings() {
       twitter: { url: '', isActive: true },
       linkedin: { url: '', isActive: true },
       youtube: { url: '', isActive: true },
+    },
+    affiliateSettings: {
+      programEnabled: true,
+      allowAffiliateRegistration: true,
+      maxAffiliates: 500,
+      approvalMode: 'auto',
+      referralCodePrefix: 'MASH',
+      extraTrialDaysForReferredMerchant: 10,
+      termsAndConditions: 'Affiliate partners earn 30% recurring commission for 6 months on actual subscription payments made by referred merchants. Minimum withdrawal is ৳100.',
+      defaultCommissionRate: 30,
+      commissionDurationMonths: 6,
+      commissionType: 'recurring',
+      commissionBasis: 'actual_paid',
+      commissionApprovalMode: 'auto',
+      holdDays: 0,
+      autoReverseOnRefund: true,
+      withdrawalsEnabled: true,
+      minimumWithdrawalAmount: 100,
+      maximumWithdrawalAmount: 50000,
+      supportedMethods: ['bKash', 'Nagad', 'Rocket', 'Bank'],
+      withdrawalApprovalRequired: true,
+      notifications: {
+        onRegistration: true,
+        onCommissionGenerated: true,
+        onCommissionApproved: true,
+        onWithdrawalRequested: true,
+        onWithdrawalCompleted: true,
+        onWithdrawalRejected: true,
+      },
     },
   });
 
@@ -120,6 +150,35 @@ export default function GlobalSettings() {
             twitter: { url: '', isActive: true },
             linkedin: { url: '', isActive: true },
             youtube: { url: '', isActive: true },
+          },
+          affiliateSettings: {
+            programEnabled: data.affiliateSettings?.programEnabled !== false,
+            allowAffiliateRegistration: data.affiliateSettings?.allowAffiliateRegistration !== false,
+            maxAffiliates: data.affiliateSettings?.maxAffiliates ?? 500,
+            approvalMode: data.affiliateSettings?.approvalMode || 'auto',
+            referralCodePrefix: data.affiliateSettings?.referralCodePrefix || 'MASH',
+            extraTrialDaysForReferredMerchant: data.affiliateSettings?.extraTrialDaysForReferredMerchant ?? 10,
+            termsAndConditions: data.affiliateSettings?.termsAndConditions || 'Affiliate partners earn 30% recurring commission for 6 months on actual subscription payments made by referred merchants. Minimum withdrawal is ৳100.',
+            defaultCommissionRate: data.affiliateSettings?.defaultCommissionRate ?? 30,
+            commissionDurationMonths: data.affiliateSettings?.commissionDurationMonths ?? 6,
+            commissionType: data.affiliateSettings?.commissionType || 'recurring',
+            commissionBasis: 'actual_paid',
+            commissionApprovalMode: data.affiliateSettings?.commissionApprovalMode || 'auto',
+            holdDays: data.affiliateSettings?.holdDays ?? 0,
+            autoReverseOnRefund: data.affiliateSettings?.autoReverseOnRefund !== false,
+            withdrawalsEnabled: data.affiliateSettings?.withdrawalsEnabled !== false,
+            minimumWithdrawalAmount: data.affiliateSettings?.minimumWithdrawalAmount ?? 100,
+            maximumWithdrawalAmount: data.affiliateSettings?.maximumWithdrawalAmount ?? 50000,
+            supportedMethods: data.affiliateSettings?.supportedMethods || ['bKash', 'Nagad', 'Rocket', 'Bank'],
+            withdrawalApprovalRequired: data.affiliateSettings?.withdrawalApprovalRequired !== false,
+            notifications: {
+              onRegistration: data.affiliateSettings?.notifications?.onRegistration !== false,
+              onCommissionGenerated: data.affiliateSettings?.notifications?.onCommissionGenerated !== false,
+              onCommissionApproved: data.affiliateSettings?.notifications?.onCommissionApproved !== false,
+              onWithdrawalRequested: data.affiliateSettings?.notifications?.onWithdrawalRequested !== false,
+              onWithdrawalCompleted: data.affiliateSettings?.notifications?.onWithdrawalCompleted !== false,
+              onWithdrawalRejected: data.affiliateSettings?.notifications?.onWithdrawalRejected !== false,
+            },
           },
         });
         if (data.themePreviews) {
@@ -203,7 +262,7 @@ export default function GlobalSettings() {
       fetchPlatformTracking();
     } else if (activeTab === 'payments') {
       fetchPlatformPayments();
-    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers' || activeTab === 'social') {
+    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers' || activeTab === 'social' || activeTab === 'affiliate') {
       fetchGlobalSettings();
     }
   }, [activeTab]);
@@ -585,6 +644,15 @@ export default function GlobalSettings() {
           >
             <Share2 className={`w-5 h-5 ${activeTab === 'social' ? 'text-blue-600' : 'text-slate-400'}`} />
             Social Media Links
+          </button>
+          <button 
+            onClick={() => setActiveTab('affiliate')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'affiliate' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Users className={`w-5 h-5 ${activeTab === 'affiliate' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Affiliate Program
           </button>
         </div>
 
@@ -1382,6 +1450,444 @@ export default function GlobalSettings() {
                 <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <div>
                   <strong>Conditional Rendering:</strong> If an input field is empty, or if the toggle switch is turned off, that specific social icon/link will automatically not be rendered on the landing page footer.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'affiliate' && (
+            <div className="p-8 space-y-8 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">
+                    {affLang === 'bn' ? 'অ্যাফিলিয়েট প্রোগ্রাম গ্লোবাল কনফিগারেশন' : 'Affiliate Program Global Configuration'}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {affLang === 'bn'
+                      ? 'অ্যাফিলিয়েট রেজিস্ট্রেশন সীমা, ৩০% রেকারিং কমিশন, ৬ মাসের মেয়াদ এবং উইথড্রয়াল নিয়মাবলী নিয়ন্ত্রণ করুন।'
+                      : 'Control affiliate registration limits, 30% recurring commission rules, 6-month duration, and withdrawal settings.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setAffLang('en')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        affLang === 'en' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAffLang('bn')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        affLang === 'bn' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      বাংলা
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section A: Affiliate Program & Registration Control */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs">A</span>
+                  {affLang === 'bn' ? 'প্রোগ্রাম স্ট্যাটাস ও রেজিস্ট্রেশন নিয়ন্ত্রণ' : 'Program Status & Registration Control'}
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {affLang === 'bn' ? 'অ্যাফিলিয়েট প্রোগ্রাম সক্রিয়' : 'Affiliate Program Enabled'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {affLang === 'bn' ? 'সম্পূর্ণ অ্যাফিলিয়েট সিস্টেম চালু বা বন্ধ করুন' : 'Master toggle for the entire Affiliate Partner system'}
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.affiliateSettings?.programEnabled !== false}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: { ...prev.affiliateSettings, programEnabled: e.target.checked },
+                        }))
+                      }
+                      className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {affLang === 'bn' ? 'নতুন অ্যাফিলিয়েট রেজিস্ট্রেশন অনুমোদন' : 'Allow New Affiliate Registration'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {affLang === 'bn' ? 'বন্ধ করলে নতুন কেউ রেজিস্ট্রেশন করতে পারবে না' : 'Disable to pause new Affiliate Partner signups'}
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.affiliateSettings?.allowAffiliateRegistration !== false}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            allowAffiliateRegistration: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'সর্বোচ্চ অ্যাফিলিয়েট সীমা (Max Affiliates)' : 'Max Affiliate Partners Limit'}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.affiliateSettings?.maxAffiliates ?? 500}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            maxAffiliates: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {affLang === 'bn' ? 'সীমা পূর্ণ হলে রেজিস্ট্রেশন অটোমেটিক বন্ধ হবে' : 'Signups auto-close when cap is reached'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'অ্যাকাউন্ট অনুমোদন মোড' : 'Registration Approval Mode'}
+                    </label>
+                    <select
+                      value={formData.affiliateSettings?.approvalMode || 'auto'}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            approvalMode: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    >
+                      <option value="auto">{affLang === 'bn' ? 'অটো অ্যাপ্রুভ (Auto)' : 'Auto Approve'}</option>
+                      <option value="manual">{affLang === 'bn' ? 'ম্যানুয়াল অ্যাপ্রুভ (Manual)' : 'Manual Admin Approval'}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'রেফারেল কোড প্রিফিক্স' : 'Referral Code Prefix'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.affiliateSettings?.referralCodePrefix || 'MASH'}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            referralCodePrefix: e.target.value.toUpperCase(),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'মার্চেন্ট বোনাস ট্রায়াল (দিন)' : 'Extra Trial Days for Merchant'}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      value={formData.affiliateSettings?.extraTrialDaysForReferredMerchant ?? 10}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            extraTrialDaysForReferredMerchant: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section B: Commission Rules */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">B</span>
+                  {affLang === 'bn' ? 'কমিশন সেটিংস (ডিফল্ট ৩০% — ৬ মাস)' : 'Commission Settings (Default 30% for 6 Months)'}
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'ডিফল্ট কমিশন রেট (%)' : 'Default Commission Rate (%)'}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={formData.affiliateSettings?.defaultCommissionRate ?? 30}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            defaultCommissionRate: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-emerald-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'কমিশনের মেয়াদ (মাস)' : 'Commission Duration (Months)'}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={formData.affiliateSettings?.commissionDurationMonths ?? 6}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            commissionDurationMonths: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'কমিশনের ধরন' : 'Commission Type'}
+                    </label>
+                    <select
+                      value={formData.affiliateSettings?.commissionType || 'recurring'}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            commissionType: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    >
+                      <option value="recurring">{affLang === 'bn' ? 'রেকারিং (Recurring)' : 'Recurring'}</option>
+                      <option value="one_time">{affLang === 'bn' ? 'এককালীন (One-Time)' : 'One-Time (First Payment Only)'}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'কমিশন অ্যাপ্রুভাল মোড' : 'Commission Approval Mode'}
+                    </label>
+                    <select
+                      value={formData.affiliateSettings?.commissionApprovalMode || 'auto'}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            commissionApprovalMode: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    >
+                      <option value="auto">{affLang === 'bn' ? 'অটো (সরাসরি ব্যালেন্সে যোগ)' : 'Auto (Credit Available Balance)'}</option>
+                      <option value="manual">{affLang === 'bn' ? 'ম্যানুয়াল (পেন্ডিং ব্যালেন্স)' : 'Manual (Credit Pending First)'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900">
+                  <strong>{affLang === 'bn' ? 'কমিশন হিসাবের ভিত্তি:' : 'Commission Calculation Basis:'}</strong>{' '}
+                  {affLang === 'bn'
+                    ? 'মার্চেন্ট ডিসকাউন্টের পর প্রকৃতপক্ষে যত টাকা পেমেন্ট করবেন (Actual Paid Amount), তার ওপর কমিশন হিসাব হবে। যেমন: ৳৪৯৯ × ৩০% = ৳১৪৯.৭০; ডিসকাউন্টের পর ৳৩৯৯ × ৩০% = ৳১১৯.৭০।'
+                    : 'Always calculated on the Actual Amount Paid by the referred merchant after any discounts (e.g., ৳499 × 30% = ৳149.70; discounted ৳399 × 30% = ৳119.70). Existing referrals retain their snapshot configuration.'}
+                </div>
+              </div>
+
+              {/* Section C: Withdrawal Rules */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">C</span>
+                  {affLang === 'bn' ? 'উইথড্রয়াল সেটিংস (ন্যূনতম ৳১০০)' : 'Withdrawal Settings (Minimum ৳100)'}
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {affLang === 'bn' ? 'উইথড্রয়াল চালু' : 'Withdrawals Enabled'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {affLang === 'bn' ? 'অ্যাফিলিয়েটদের টাকা তোলার অনুরোধ করার অনুমতি দিন' : 'Allow affiliates to submit payout requests'}
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.affiliateSettings?.withdrawalsEnabled !== false}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            withdrawalsEnabled: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'ন্যূনতম উইথড্রয়াল (৳)' : 'Minimum Withdrawal Amount (৳)'}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.affiliateSettings?.minimumWithdrawalAmount ?? 100}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            minimumWithdrawalAmount: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {affLang === 'bn' ? 'সর্বোচ্চ উইথড্রয়াল (৳)' : 'Maximum Withdrawal Amount (৳)'}
+                    </label>
+                    <input
+                      type="number"
+                      min="100"
+                      value={formData.affiliateSettings?.maximumWithdrawalAmount ?? 50000}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          affiliateSettings: {
+                            ...prev.affiliateSettings,
+                            maximumWithdrawalAmount: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    {affLang === 'bn' ? 'সমর্থিত পেমেন্ট মাধ্যম' : 'Supported Withdrawal Payment Methods'}
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {['bKash', 'Nagad', 'Rocket', 'Bank'].map((method) => {
+                      const list = formData.affiliateSettings?.supportedMethods || ['bKash', 'Nagad', 'Rocket', 'Bank'];
+                      const checked = list.includes(method);
+                      return (
+                        <label
+                          key={method}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                            checked
+                              ? 'bg-blue-50 border-blue-300 text-blue-700'
+                              : 'bg-slate-50 border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...list, method]
+                                : list.filter((m) => m !== method);
+                              setFormData((prev) => ({
+                                ...prev,
+                                affiliateSettings: {
+                                  ...prev.affiliateSettings,
+                                  supportedMethods: next,
+                                },
+                              }));
+                            }}
+                            className="accent-blue-600"
+                          />
+                          {method}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section D: Terms & Notification Toggles */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">D</span>
+                  {affLang === 'bn' ? 'শর্তাবলী এবং রিয়েল-টাইম নোটিফিকেশন' : 'Terms & Real-Time Notifications'}
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {affLang === 'bn' ? 'অ্যাফিলিয়েট শর্তাবলী ও নীতিমালা' : 'Program Terms & Conditions Summary'}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.affiliateSettings?.termsAndConditions || ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        affiliateSettings: {
+                          ...prev.affiliateSettings,
+                          termsAndConditions: e.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                  />
                 </div>
               </div>
             </div>

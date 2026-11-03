@@ -28,6 +28,8 @@ const GlobalSettings = lazy(() => import("./pages/GlobalSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const ContactInquiries = lazy(() => import("./pages/ContactInquiries"));
 const Referrals = lazy(() => import("./pages/Referrals"));
+const Affiliates = lazy(() => import("./pages/Affiliates"));
+const AffiliateDetails = lazy(() => import("./pages/AffiliateDetails"));
 const Blogs = lazy(() => import("./pages/Blogs"));
 
 function App() {
@@ -54,6 +56,8 @@ function App() {
             <Route path="clients" element={<Clients />} />
             <Route path="users" element={<Users />} />
             <Route path="referrals" element={<Referrals />} />
+            <Route path="affiliates" element={<Affiliates />} />
+            <Route path="affiliates/:id" element={<AffiliateDetails />} />
             <Route path="health" element={<Health />} />
             <Route path="billing" element={<Billing />} />
             <Route path="addon-requests" element={<AddonRequests />} />
