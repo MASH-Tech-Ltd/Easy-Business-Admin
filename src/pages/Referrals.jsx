@@ -21,6 +21,8 @@ import {
   Coins,
   Banknote,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function Referrals() {
@@ -44,7 +46,8 @@ export default function Referrals() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [withdrawalFilter, setWithdrawalFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({ page: 1, limit: 15, total: 0, totalPage: 1 });
+  const [limit, setLimit] = useState(10);
+  const [meta, setMeta] = useState({ page: 1, limit: 10, total: 0, totalPage: 1 });
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,7 +76,7 @@ export default function Referrals() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: "15",
+        limit: String(limit),
       });
       if (search.trim()) params.append("search", search.trim());
       if (statusFilter !== "all") params.append("status", statusFilter);
@@ -82,7 +85,7 @@ export default function Referrals() {
       if (res.data?.status === "ok" || res.data?.success) {
         const payload = res.data.data;
         setReferrals(payload?.data || []);
-        setMeta(payload?.meta || { page: 1, limit: 15, total: 0, totalPage: 1 });
+        setMeta(payload?.meta || { page: 1, limit, total: 0, totalPage: 1 });
         if (payload?.stats) {
           setStats(payload.stats);
         }
@@ -92,7 +95,7 @@ export default function Referrals() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, limit, search, statusFilter]);
 
   // Fetch Referral Usages / Redemptions
   const fetchUsages = useCallback(async () => {
@@ -100,7 +103,7 @@ export default function Referrals() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: "15",
+        limit: String(limit),
       });
       if (search.trim()) params.append("search", search.trim());
 
@@ -108,14 +111,14 @@ export default function Referrals() {
       if (res.data?.status === "ok" || res.data?.success) {
         const payload = res.data.data;
         setUsages(payload?.data || []);
-        setMeta(payload?.meta || { page: 1, limit: 15, total: 0, totalPage: 1 });
+        setMeta(payload?.meta || { page: 1, limit, total: 0, totalPage: 1 });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to load referral usages");
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, limit, search]);
 
   // Fetch Merchant Withdrawals
   const fetchWithdrawals = useCallback(async () => {
@@ -123,7 +126,7 @@ export default function Referrals() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: "15",
+        limit: String(limit),
       });
       if (withdrawalFilter !== "all") params.append("status", withdrawalFilter);
 
@@ -131,14 +134,14 @@ export default function Referrals() {
       if (res.data?.status === "ok" || res.data?.success) {
         const payload = res.data.data;
         setWithdrawals(payload?.data || []);
-        setMeta(payload?.meta || { page: 1, limit: 15, total: 0, totalPage: 1 });
+        setMeta(payload?.meta || { page: 1, limit, total: 0, totalPage: 1 });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to load withdrawals");
     } finally {
       setLoading(false);
     }
-  }, [page, withdrawalFilter]);
+  }, [page, limit, withdrawalFilter]);
 
   useEffect(() => {
     if (activeTab === "codes") {
@@ -947,25 +950,53 @@ export default function Referrals() {
         )}
 
         {/* Pagination footer */}
-        {meta.totalPage > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm">
-            <span className="text-slate-500 text-xs">
-              Showing page {meta.page} of {meta.totalPage} ({meta.total} total)
-            </span>
+        {meta.total > 0 && (
+          <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <span className="font-bold text-slate-900">{(page - 1) * limit + 1}</span> to{" "}
+                <span className="font-bold text-slate-900">{Math.min(page * limit, meta.total)}</span> of{" "}
+                <span className="font-bold text-slate-900">{meta.total}</span> items
+              </span>
+              <div className="flex items-center gap-1.5 ml-2">
+                <span className="text-slate-400">Rows:</span>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 disabled:opacity-40 rounded-lg transition-colors"
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
               >
-                Previous
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Previous</span>
               </button>
+
+              <span className="font-bold text-slate-800 px-2 sm:px-3">
+                Page {page} of {meta.totalPage || meta.totalPages || 1}
+              </span>
+
               <button
-                onClick={() => setPage((p) => Math.min(meta.totalPage, p + 1))}
-                disabled={page >= meta.totalPage}
-                className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 disabled:opacity-40 rounded-lg transition-colors"
+                onClick={() => setPage((p) => Math.min(meta.totalPage || meta.totalPages || 1, p + 1))}
+                disabled={page >= (meta.totalPage || meta.totalPages || 1)}
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

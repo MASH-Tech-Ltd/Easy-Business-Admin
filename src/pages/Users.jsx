@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { Eye, Shield, Search, X } from "lucide-react";
+import { Eye, Shield, Search, X, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useGetAllUsersQuery } from "../store/apiSlice";
 
 export default function Users() {
@@ -11,94 +11,219 @@ export default function Users() {
   const [activeUser, setActiveUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Search & Pagination State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const openViewModal = (user) => {
     setActiveUser(user);
     setIsModalOpen(true);
   };
 
+  // Filtered & Paginated Users
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return users.filter((u) => {
+      const matchSearch =
+        !q ||
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
+        (u.address && u.address.toLowerCase().includes(q));
+      const matchRole = roleFilter === "all" || u.role === roleFilter;
+      return matchSearch && matchRole;
+    });
+  }, [users, searchQuery, roleFilter]);
+
+  const totalUsers = filteredUsers.length;
+  const totalPages = Math.ceil(totalUsers / pageSize) || 1;
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Merchant Users</h2>
           <p className="text-slate-500 mt-1">
             Manage all tenant administrators and their profiles.
           </p>
         </div>
+
+        {/* Search & Filter Bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search user, email, phone..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-slate-200 rounded-xl text-xs sm:text-sm bg-white text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Roles</option>
+              <option value="tenant_admin">Tenant Admin</option>
+              <option value="affiliate_partner">Affiliate Partner</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="glass rounded-2xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-100/50 text-slate-500 text-sm font-medium">
-            <tr>
-              <th className="px-6 py-4">User</th>
-              <th className="px-6 py-4">Role</th>
-              <th className="px-6 py-4">Phone</th>
-              <th className="px-6 py-4">Address</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200/60">
-            {users.map((user) => (
-              <tr
-                key={user._id}
-                className="hover:bg-slate-50/50 transition-colors"
-              >
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    {user.avatar?.secure_url ? (
-                      <img
-                        src={user.avatar.secure_url}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-lg object-cover shadow-sm"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                        {user.name.charAt(0)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-slate-800">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-slate-500">{user.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold uppercase">
-                    {user.role.replace("_", " ")}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-slate-600 text-sm">
-                  {user.phone || "N/A"}
-                </td>
-                <td className="px-6 py-4 text-slate-600 text-sm truncate max-w-[200px]">
-                  {user.address || "N/A"}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={() => openViewModal(user)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2 ml-auto"
-                  >
-                    <Eye className="w-4 h-4" />{" "}
-                    <span className="text-sm font-medium">View</span>
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && !loading && (
+      <div className="glass rounded-2xl overflow-hidden shadow-xs border border-slate-200/60 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
               <tr>
-                <td
-                  colSpan="5"
-                  className="px-6 py-8 text-center text-slate-500"
-                >
-                  No users found.
-                </td>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Phone</th>
+                <th className="px-6 py-4">Address</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    Loading merchant users...
+                  </td>
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="px-6 py-12 text-center text-slate-400"
+                  >
+                    No users found matching your search.
+                  </td>
+                </tr>
+              ) : (
+                paginatedUsers.map((user) => (
+                  <tr
+                    key={user._id}
+                    className="hover:bg-slate-50/70 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {user.avatar?.secure_url ? (
+                          <img
+                            src={user.avatar.secure_url}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-lg object-cover shadow-xs border border-slate-100"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                            {(user.name || "U").charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-800 text-sm">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-slate-500">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200/70 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                        {(user.role || "").replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 text-xs sm:text-sm font-medium">
+                      {user.phone || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 text-xs sm:text-sm truncate max-w-[200px]">
+                      {user.address || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => openViewModal(user)}
+                        className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        {totalUsers > 0 && (
+          <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <span className="font-bold text-slate-900">{(page - 1) * pageSize + 1}</span> to{" "}
+                <span className="font-bold text-slate-900">{Math.min(page * pageSize, totalUsers)}</span> of{" "}
+                <span className="font-bold text-slate-900">{totalUsers}</span> users
+              </span>
+              <div className="flex items-center gap-1.5 ml-2">
+                <span className="text-slate-400">Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+
+              <span className="font-bold text-slate-800 px-2 sm:px-3">
+                Page {page} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && activeUser && (

@@ -24,6 +24,7 @@ import {
   Truck,
   Gift,
   BookOpen,
+  BarChart2,
 } from "lucide-react";
 
 const Badge = ({ children, type = "NEW" }) => (
@@ -286,6 +287,7 @@ export default function Sidebar() {
     {
       title: "Tenant Management",
       items: [
+        { name: "Analytics & Tracking", path: "/analytics", icon: BarChart2 },
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
         {

@@ -31,6 +31,7 @@ const Referrals = lazy(() => import("./pages/Referrals"));
 const Affiliates = lazy(() => import("./pages/Affiliates"));
 const AffiliateDetails = lazy(() => import("./pages/AffiliateDetails"));
 const Blogs = lazy(() => import("./pages/Blogs"));
+const Analytics = lazy(() => import("./pages/Analytics"));
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
             }
           >
             <Route index element={<Overview />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="packages" element={<Packages />} />
             <Route path="clients" element={<Clients />} />
             <Route path="users" element={<Users />} />
