@@ -75,7 +75,8 @@ export default function Affiliates() {
 
   // Tab 4: Audit Logs
   const [auditLogs, setAuditLogs] = useState([]);
-  const [auditMeta, setAuditMeta] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
+  const [auditMeta, setAuditMeta] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
+  const [auditLimit, setAuditLimit] = useState(20);
   const [loadingAudit, setLoadingAudit] = useState(false);
 
   // Process Withdrawal Modal
@@ -171,22 +172,22 @@ export default function Affiliates() {
     }
   }, [commSearch, commStatus]);
 
-  const fetchAuditLogs = useCallback(async (page = 1) => {
+  const fetchAuditLogs = useCallback(async (page = 1, currentLimit = auditLimit) => {
     try {
       setLoadingAudit(true);
       const res = await api.get('/affiliates/admin/audit-logs', {
-        params: { page, limit: 15 },
+        params: { page, limit: currentLimit },
       });
       if (res.data?.data) {
         setAuditLogs(res.data.data.data || []);
-        setAuditMeta(res.data.data.meta || { page: 1, limit: 15, total: 0, totalPages: 1 });
+        setAuditMeta(res.data.data.meta || { page: 1, limit: currentLimit, total: 0, totalPages: 1 });
       }
     } catch (err) {
       toast.error('Failed to load audit logs');
     } finally {
       setLoadingAudit(false);
     }
-  }, []);
+  }, [auditLimit]);
 
   useEffect(() => {
     fetchOverview();
@@ -985,6 +986,44 @@ export default function Affiliates() {
       {/* TAB 4: AUDIT LOGS */}
       {activeTab === 'audit' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+          {/* Top header with 1-day TTL notice and selectable page limit (20, 50) */}
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-800 text-sm">
+                {lang === 'bn' ? 'অডিট লগ তালিকা' : 'Affiliate Audit Logs'}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                {lang === 'bn' ? '১ দিন পর স্বয়ংক্রিয়ভাবে মুছে যায় (TTL 24h)' : 'Auto-purges after 24h (1-Day TTL)'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-medium">
+                {lang === 'bn' ? 'প্রতি পেজে:' : 'Per page:'}
+              </span>
+              <select
+                value={auditLimit}
+                onChange={(e) => {
+                  const newLimit = Number(e.target.value);
+                  setAuditLimit(newLimit);
+                  fetchAuditLogs(1, newLimit);
+                }}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50 cursor-pointer"
+              >
+                <option value={20}>20 {lang === 'bn' ? 'টি' : 'logs'}</option>
+                <option value={50}>50 {lang === 'bn' ? 'টি' : 'logs'}</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => fetchAuditLogs(auditMeta.page, auditLimit)}
+                className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+                title="Refresh"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingAudit ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -1012,7 +1051,7 @@ export default function Affiliates() {
                 ) : (
                   auditLogs.map((log) => (
                     <tr key={log._id} className="hover:bg-slate-50/70">
-                      <td className="py-3 px-4 text-slate-500">
+                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
                         {new Date(log.createdAt).toLocaleString()}
                       </td>
                       <td className="py-3 px-4">
@@ -1034,6 +1073,31 @@ export default function Affiliates() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              {lang === 'bn'
+                ? `পৃষ্ঠা ${auditMeta.page} এর ${auditMeta.totalPages} (মোট ${auditMeta.total} টি লগ)`
+                : `Showing page ${auditMeta.page} of ${auditMeta.totalPages} (${auditMeta.total} total)`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={auditMeta.page <= 1}
+                onClick={() => fetchAuditLogs(auditMeta.page - 1, auditLimit)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={auditMeta.page >= auditMeta.totalPages}
+                onClick={() => fetchAuditLogs(auditMeta.page + 1, auditLimit)}
+                className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
