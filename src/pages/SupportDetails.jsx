@@ -222,13 +222,6 @@ export default function SupportDetails() {
           <div>
             <h1 className="text-xl font-bold text-slate-800">{ticket.subject} (ID: {ticket.ticketId})</h1>
             <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700 shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                LIVE
-              </span>
               <span>{ticket.tenantId?.name}</span>
               <span>•</span>
               <span>{new Date(ticket.createdAt).toLocaleString()}</span>
@@ -272,7 +265,7 @@ export default function SupportDetails() {
             const isAdmin = msg.senderType === 'ADMIN';
             return (
               <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-5 py-3 ${
+                <div className={`max-w-[80%] rounded-2xl px-5 py-3 break-words [overflow-wrap:anywhere] ${
                   isAdmin 
                     ? 'bg-blue-600 text-white rounded-tr-sm' 
                     : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'
@@ -286,7 +279,7 @@ export default function SupportDetails() {
                     <Clock className="w-3 h-3" />
                     {new Date(msg.createdAt || msg._id.getTimestamp?.() || Date.now()).toLocaleString()}
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.message}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed break-words [overflow-wrap:anywhere]">{msg.message}</p>
                 </div>
               </div>
             );
