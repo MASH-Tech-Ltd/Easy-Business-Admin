@@ -305,9 +305,9 @@ export default function SupportDetails() {
               onChange={(e) => {
                 setReplyMessage(e.target.value);
                 if (socket && ticket?.ticketId) {
-                  socket.emit('typing_start', { ticketId: ticket.ticketId, senderName: 'Admin' });
+                  socket.emit('typing_start', { ticketId: ticket.ticketId, senderName: 'Support Team' });
                   if (ticket._id) {
-                    socket.emit('typing_start', { ticketId: String(ticket._id), senderName: 'Admin' });
+                    socket.emit('typing_start', { ticketId: String(ticket._id), senderName: 'Support Team' });
                   }
                   if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                   typingTimeoutRef.current = setTimeout(() => {
