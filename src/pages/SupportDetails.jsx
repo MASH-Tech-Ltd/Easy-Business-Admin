@@ -37,11 +37,14 @@ export default function SupportDetails() {
   useEffect(() => {
     if (socket && ticket) {
       socket.emit('join_ticket', ticket.ticketId);
+      if (ticket._id) {
+        socket.emit('join_ticket', String(ticket._id));
+      }
 
       socket.on('new_message', (message) => {
         setTicket((prev) => {
           if (!prev) return prev;
-          if (prev.messages.some(m => m._id === message._id)) return prev;
+          if (prev.messages.some(m => String(m._id) === String(message._id))) return prev;
           return {
             ...prev,
             messages: [...prev.messages, message]
@@ -62,14 +65,20 @@ export default function SupportDetails() {
       });
 
       socket.on('typing_start', (data) => {
-        if (data.ticketId === ticket.ticketId) {
+        const cleanDataId = String(data?.ticketId || '').replace(/^#/, '').trim().toUpperCase();
+        const cleanCurId = String(ticket?.ticketId || '').replace(/^#/, '').trim().toUpperCase();
+        const curMongoId = String(ticket?._id || '').trim();
+        if (!data?.ticketId || cleanDataId === cleanCurId || cleanDataId === curMongoId) {
           setIsTyping(true);
-          setTypingUser(data.senderName);
+          setTypingUser(data.senderName || 'Affiliate Partner');
         }
       });
 
       socket.on('typing_end', (data) => {
-        if (data.ticketId === ticket.ticketId) {
+        const cleanDataId = String(data?.ticketId || '').replace(/^#/, '').trim().toUpperCase();
+        const cleanCurId = String(ticket?.ticketId || '').replace(/^#/, '').trim().toUpperCase();
+        const curMongoId = String(ticket?._id || '').trim();
+        if (!data?.ticketId || cleanDataId === cleanCurId || cleanDataId === curMongoId) {
           setIsTyping(false);
           setTypingUser('');
         }
@@ -77,6 +86,9 @@ export default function SupportDetails() {
 
       return () => {
         socket.emit('leave_ticket', ticket.ticketId);
+        if (ticket._id) {
+          socket.emit('leave_ticket', String(ticket._id));
+        }
         socket.off('new_message');
         socket.off('status_changed');
         socket.off('ticket_deleted');
@@ -84,7 +96,7 @@ export default function SupportDetails() {
         socket.off('typing_end');
       };
     }
-  }, [socket, ticket?.ticketId]);
+  }, [socket, ticket?.ticketId, ticket?._id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -108,6 +120,13 @@ export default function SupportDetails() {
   const handleReply = async (e) => {
     e.preventDefault();
     if (!replyMessage.trim()) return;
+
+    if (socket && ticket?.ticketId) {
+      socket.emit('typing_end', { ticketId: ticket.ticketId });
+      if (ticket._id) {
+        socket.emit('typing_end', { ticketId: String(ticket._id) });
+      }
+    }
 
     setSending(true);
     try {
@@ -203,6 +222,13 @@ export default function SupportDetails() {
           <div>
             <h1 className="text-xl font-bold text-slate-800">{ticket.subject} (ID: {ticket.ticketId})</h1>
             <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700 shadow-2xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                LIVE
+              </span>
               <span>{ticket.tenantId?.name}</span>
               <span>•</span>
               <span>{new Date(ticket.createdAt).toLocaleString()}</span>
@@ -285,12 +311,18 @@ export default function SupportDetails() {
               value={replyMessage}
               onChange={(e) => {
                 setReplyMessage(e.target.value);
-                if (socket) {
+                if (socket && ticket?.ticketId) {
                   socket.emit('typing_start', { ticketId: ticket.ticketId, senderName: 'Admin' });
+                  if (ticket._id) {
+                    socket.emit('typing_start', { ticketId: String(ticket._id), senderName: 'Admin' });
+                  }
                   if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                   typingTimeoutRef.current = setTimeout(() => {
                     socket.emit('typing_end', { ticketId: ticket.ticketId });
-                  }, 2000);
+                    if (ticket._id) {
+                      socket.emit('typing_end', { ticketId: String(ticket._id) });
+                    }
+                  }, 2500);
                 }
               }}
               placeholder="Type your reply here..."
@@ -298,7 +330,10 @@ export default function SupportDetails() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (socket) socket.emit('typing_end', { ticketId: ticket.ticketId });
+                  if (socket && ticket?.ticketId) {
+                    socket.emit('typing_end', { ticketId: ticket.ticketId });
+                    if (ticket._id) socket.emit('typing_end', { ticketId: String(ticket._id) });
+                  }
                   handleReply(e);
                 }
               }}
