@@ -42,6 +42,7 @@ export default function GlobalSettings() {
       { id: 'redx', isActive: true, badge: 'none', message: '' }
     ],
     sidebarMenu: [
+      { id: 'manualOrders', isActive: true, badge: 'new', message: '' },
       { id: 'courier', isActive: true, badge: 'beta', message: '' },
       { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
       { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
@@ -138,12 +139,29 @@ export default function GlobalSettings() {
             { id: 'steadfast', isActive: true, badge: 'none', message: '' },
             { id: 'redx', isActive: true, badge: 'none', message: '' }
           ],
-          sidebarMenu: data.sidebarMenu || [
-            { id: 'courier', isActive: true, badge: 'beta', message: '' },
-            { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
-            { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
-            { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
-          ],
+          sidebarMenu: (() => {
+            const defaultMenu = [
+              { id: 'manualOrders', isActive: true, badge: 'new', message: '' },
+              { id: 'courier', isActive: true, badge: 'beta', message: '' },
+              { id: 'fraudCheck', isActive: true, badge: 'beta', message: '' },
+              { id: 'checkoutLeads', isActive: true, badge: 'beta', message: '' },
+              { id: 'apiKeys', isActive: true, badge: 'beta', message: '' },
+            ];
+            if (!Array.isArray(data.sidebarMenu) || data.sidebarMenu.length === 0) {
+              return defaultMenu;
+            }
+            const merged = [...data.sidebarMenu];
+            defaultMenu.forEach((defItem) => {
+              if (!merged.some((item) => item.id === defItem.id)) {
+                if (defItem.id === 'manualOrders') {
+                  merged.unshift(defItem);
+                } else {
+                  merged.push(defItem);
+                }
+              }
+            });
+            return merged;
+          })(),
           socialLinks: data.socialLinks || {
             facebook: { url: '', isActive: true },
             instagram: { url: '', isActive: true },
@@ -775,7 +793,8 @@ export default function GlobalSettings() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-slate-800 capitalize">
-                          {menuItem.id === 'fraudCheck' ? 'Fraud Check' : 
+                          {menuItem.id === 'manualOrders' ? 'Manual Order' :
+                           menuItem.id === 'fraudCheck' ? 'Fraud Check' : 
                            menuItem.id === 'checkoutLeads' ? 'Checkout Leads' : 
                            menuItem.id === 'apiKeys' ? 'API Keys' : menuItem.id}
                         </h3>
