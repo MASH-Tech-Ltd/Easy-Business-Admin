@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -10,6 +10,9 @@ export default function GlobalSettings() {
   const [affLang, setAffLang] = useState('en');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTracking, setIsLoadingTracking] = useState(false);
+  const [isTestingCapi, setIsTestingCapi] = useState(false);
+  const [recentTrackingEvents, setRecentTrackingEvents] = useState([]);
+  const [trackingDocModal, setTrackingDocModal] = useState(null);
   const [isLoadingPayments, setIsLoadingPayments] = useState(false);
   const [isLoadingGlobal, setIsLoadingGlobal] = useState(false);
   const [seedingThemeId, setSeedingThemeId] = useState(null);
@@ -98,7 +101,36 @@ export default function GlobalSettings() {
 
   const [platformTracking, setPlatformTracking] = useState({
     googleAnalytics: { enabled: false, measurementId: '' },
-    metaPixel: { enabled: false, pixelId: '' },
+    metaPixel: {
+      enabled: false,
+      pixelId: '',
+      capiEnabled: false,
+      capiAccessToken: '',
+      hasCapiToken: false,
+      capiTokenMasked: '',
+      clearCapiToken: false,
+      graphApiVersion: 'v21.0',
+      testEventCode: '',
+      events: {
+        PageView: true,
+        ViewContent: true,
+        CompleteRegistration: true,
+        StartTrial: true,
+        InitiateCheckout: true,
+        Purchase: true,
+        Contact: true,
+      },
+      diagnostics: {
+        lastTestAt: null,
+        lastTestStatus: 'idle',
+        lastTestMessage: '',
+        lastEventAt: null,
+        lastEventName: '',
+        lastEventStatus: 'idle',
+        lastErrorMessage: '',
+        lastErrorAt: null,
+      },
+    },
     googleTagManager: { enabled: false, containerId: '' },
   });
 
@@ -235,25 +267,84 @@ export default function GlobalSettings() {
       setIsLoadingTracking(true);
       const res = await api.get('/tracking/platform');
       if (res.data?.data) {
+        const d = res.data.data;
+        const meta = d.metaPixel || {};
         setPlatformTracking({
           googleAnalytics: {
-            enabled: Boolean(res.data.data.googleAnalytics?.enabled),
-            measurementId: res.data.data.googleAnalytics?.measurementId || '',
+            enabled: Boolean(d.googleAnalytics?.enabled),
+            measurementId: d.googleAnalytics?.measurementId || '',
           },
           metaPixel: {
-            enabled: Boolean(res.data.data.metaPixel?.enabled),
-            pixelId: res.data.data.metaPixel?.pixelId || '',
+            enabled: Boolean(meta.enabled),
+            pixelId: meta.pixelId || '',
+            capiEnabled: Boolean(meta.capiEnabled),
+            capiAccessToken: '',
+            hasCapiToken: Boolean(meta.hasCapiToken),
+            capiTokenMasked: meta.capiTokenMasked || '',
+            clearCapiToken: false,
+            graphApiVersion: meta.graphApiVersion || 'v21.0',
+            testEventCode: meta.testEventCode || '',
+            events: {
+              PageView: meta.events?.PageView ?? true,
+              ViewContent: meta.events?.ViewContent ?? true,
+              CompleteRegistration: meta.events?.CompleteRegistration ?? true,
+              StartTrial: meta.events?.StartTrial ?? true,
+              InitiateCheckout: meta.events?.InitiateCheckout ?? true,
+              Purchase: meta.events?.Purchase ?? true,
+              Contact: meta.events?.Contact ?? true,
+            },
+            diagnostics: meta.diagnostics || {
+              lastTestAt: null,
+              lastTestStatus: 'idle',
+              lastTestMessage: '',
+              lastEventAt: null,
+              lastEventName: '',
+              lastEventStatus: 'idle',
+              lastErrorMessage: '',
+              lastErrorAt: null,
+            },
           },
           googleTagManager: {
-            enabled: Boolean(res.data.data.googleTagManager?.enabled),
-            containerId: res.data.data.googleTagManager?.containerId || '',
+            enabled: Boolean(d.googleTagManager?.enabled),
+            containerId: d.googleTagManager?.containerId || '',
           },
         });
+        setRecentTrackingEvents(Array.isArray(d.recentEvents) ? d.recentEvents : []);
       }
     } catch (err) {
       console.error('Failed to load platform tracking config', err);
     } finally {
       setIsLoadingTracking(false);
+    }
+  };
+
+  const handleTestPlatformCapi = async () => {
+    setIsTestingCapi(true);
+    const toastId = toast.loading('Testing Meta Conversions API connection...');
+    try {
+      const res = await api.post('/tracking/platform/test-capi', {
+        pixelId: platformTracking.metaPixel.pixelId,
+        graphApiVersion: platformTracking.metaPixel.graphApiVersion,
+        testEventCode: platformTracking.metaPixel.testEventCode,
+      });
+      toast.update(toastId, {
+        render: res.data?.message || 'Meta CAPI test event accepted!',
+        type: 'success',
+        isLoading: false,
+        autoClose: 4000,
+      });
+      await fetchPlatformTracking();
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Meta CAPI test failed';
+      toast.update(toastId, {
+        render: errMsg,
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000,
+      });
+      await fetchPlatformTracking();
+    } finally {
+      setIsTestingCapi(false);
     }
   };
 
@@ -297,6 +388,7 @@ export default function GlobalSettings() {
           isLoading: false,
           autoClose: 3000,
         });
+        await fetchPlatformTracking();
       } else if (activeTab === 'payments') {
         const res = await api.put('/billing/platform-payment-settings', { accounts: platformAccounts });
         toast.update(toastId, {
@@ -900,7 +992,17 @@ export default function GlobalSettings() {
 
           {activeTab === 'tracking' && (
             <div className="p-8 space-y-6 animate-fade-in">
-              <h2 className="text-lg font-semibold text-slate-800 mb-2">Platform-Level Marketing & Tracking</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-slate-800">Platform-Level Marketing & Tracking</h2>
+                <button
+                  type="button"
+                  onClick={() => setTrackingDocModal('all')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-colors self-start sm:self-auto"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Complete Setup Documentation
+                </button>
+              </div>
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-900 leading-relaxed">
@@ -918,7 +1020,16 @@ export default function GlobalSettings() {
                   <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-800">Platform Google Analytics 4 (GA4)</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-slate-800">Platform Google Analytics 4 (GA4)</h3>
+                          <button
+                            type="button"
+                            onClick={() => setTrackingDocModal('ga4')}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+                          >
+                            <HelpCircle className="w-3 h-3" /> How to find ID?
+                          </button>
+                        </div>
                         <p className="text-xs text-slate-500">Track central SaaS product visitors and conversion funnels</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -946,14 +1057,37 @@ export default function GlobalSettings() {
                     />
                   </div>
 
-                  {/* Meta Pixel */}
-                  <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-4">
-                    <div className="flex items-center justify-between">
+                  {/* Meta Pixel & Conversions API (CAPI) */}
+                  <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                       <div>
-                        <h3 className="font-semibold text-slate-800">Platform Meta (Facebook) Pixel</h3>
-                        <p className="text-xs text-slate-500">Track central SaaS marketing campaigns and landing page conversions</p>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h3 className="font-semibold text-slate-800 text-base">Platform Meta Pixel & Conversions API (CAPI)</h3>
+                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full ${
+                            platformTracking.metaPixel.enabled && platformTracking.metaPixel.pixelId
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            Pixel: {platformTracking.metaPixel.enabled && platformTracking.metaPixel.pixelId ? 'Active' : 'Off'}
+                          </span>
+                          <span className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full ${
+                            platformTracking.metaPixel.capiEnabled && platformTracking.metaPixel.pixelId && platformTracking.metaPixel.hasCapiToken
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            CAPI: {platformTracking.metaPixel.capiEnabled && platformTracking.metaPixel.hasCapiToken ? 'Active' : platformTracking.metaPixel.capiEnabled ? 'Token Missing' : 'Off'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setTrackingDocModal('meta_overview')}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+                          >
+                            <HelpCircle className="w-3 h-3" /> Setup Guide
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">Track MASH ECO platform acquisition, trial signups, checkouts & verified subscription purchases with browser + server deduplication.</p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                           type="checkbox" 
                           className="sr-only peer" 
@@ -966,23 +1100,324 @@ export default function GlobalSettings() {
                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
-                    <input 
-                      type="text" 
-                      placeholder="Platform Meta Pixel ID (e.g. 1234567890)"
-                      value={platformTracking.metaPixel.pixelId}
-                      onChange={(e) => setPlatformTracking({
-                        ...platformTracking,
-                        metaPixel: { ...platformTracking.metaPixel, pixelId: e.target.value }
-                      })}
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-semibold text-slate-700">Meta Pixel ID</label>
+                          <button
+                            type="button"
+                            onClick={() => setTrackingDocModal('pixel_id')}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            <HelpCircle className="w-3 h-3" /> Where to find?
+                          </button>
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 2265980240655799"
+                          value={platformTracking.metaPixel.pixelId}
+                          onChange={(e) => setPlatformTracking({
+                            ...platformTracking,
+                            metaPixel: { ...platformTracking.metaPixel, pixelId: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-xs font-semibold text-slate-700">Meta Graph API Version</label>
+                          <button
+                            type="button"
+                            onClick={() => setTrackingDocModal('graph_version')}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            <HelpCircle className="w-3 h-3" /> Which version?
+                          </button>
+                        </div>
+                        <select
+                          value={platformTracking.metaPixel.graphApiVersion || 'v21.0'}
+                          onChange={(e) => setPlatformTracking({
+                            ...platformTracking,
+                            metaPixel: { ...platformTracking.metaPixel, graphApiVersion: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          <option value="v22.0">v22.0 (Latest)</option>
+                          <option value="v21.0">v21.0 (Recommended)</option>
+                          <option value="v20.0">v20.0</option>
+                          <option value="v19.0">v19.0</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Server-Side CAPI Section */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                              <Lock className="w-4 h-4 text-blue-600" />
+                              Server-Side Conversions API (CAPI)
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => setTrackingDocModal('capi_token')}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+                            >
+                              <HelpCircle className="w-3 h-3" /> How to get Token?
+                            </button>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">Send authoritative conversion events directly from backend to Meta Graph API (encrypted at rest via AES-256-GCM).</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={platformTracking.metaPixel.capiEnabled}
+                            onChange={(e) => setPlatformTracking({
+                              ...platformTracking,
+                              metaPixel: { ...platformTracking.metaPixel, capiEnabled: e.target.checked }
+                            })}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs font-semibold text-slate-700">CAPI Access Token</label>
+                              <button
+                                type="button"
+                                onClick={() => setTrackingDocModal('capi_token')}
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800"
+                              >
+                                <HelpCircle className="w-3 h-3" /> Guide
+                              </button>
+                            </div>
+                            {platformTracking.metaPixel.hasCapiToken && !platformTracking.metaPixel.clearCapiToken && (
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
+                                Configured: {platformTracking.metaPixel.capiTokenMasked || '••••••••'}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            placeholder={
+                              platformTracking.metaPixel.hasCapiToken
+                                ? 'Enter new token to rotate / replace existing'
+                                : 'Paste Meta Conversions API Access Token'
+                            }
+                            value={platformTracking.metaPixel.capiAccessToken}
+                            onChange={(e) => setPlatformTracking({
+                              ...platformTracking,
+                              metaPixel: {
+                                ...platformTracking.metaPixel,
+                                capiAccessToken: e.target.value,
+                                clearCapiToken: false,
+                              }
+                            })}
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                          />
+                          {platformTracking.metaPixel.hasCapiToken && (
+                            <div className="mt-1.5 flex items-center justify-between">
+                              <span className="text-[11px] text-slate-400">Stored encrypted; raw token is never displayed.</span>
+                              <button
+                                type="button"
+                                onClick={() => setPlatformTracking({
+                                  ...platformTracking,
+                                  metaPixel: {
+                                    ...platformTracking.metaPixel,
+                                    capiAccessToken: '',
+                                    clearCapiToken: !platformTracking.metaPixel.clearCapiToken,
+                                  }
+                                })}
+                                className={`text-[11px] font-semibold px-2 py-0.5 rounded transition-colors ${
+                                  platformTracking.metaPixel.clearCapiToken
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'text-red-600 hover:bg-red-50'
+                                }`}
+                              >
+                                {platformTracking.metaPixel.clearCapiToken ? 'Will Clear on Save (Undo)' : 'Clear Saved Token'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-semibold text-slate-700">Test Event Code (Optional)</label>
+                            <button
+                              type="button"
+                              onClick={() => setTrackingDocModal('test_event_code')}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800"
+                            >
+                              <HelpCircle className="w-3 h-3" /> Where to find?
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="e.g. TEST12345 (clear when live)"
+                            value={platformTracking.metaPixel.testEventCode || ''}
+                            onChange={(e) => setPlatformTracking({
+                              ...platformTracking,
+                              metaPixel: { ...platformTracking.metaPixel, testEventCode: e.target.value }
+                            })}
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                          />
+                          <p className="text-[11px] text-slate-400 mt-1">Events with a Test Event Code appear in Meta Events Manager &rarr; Test Events.</p>
+                        </div>
+                      </div>
+
+                      {/* Event Level Toggles */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-2">Individual Platform Events Enabled</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {[
+                            { key: 'PageView', label: 'PageView' },
+                            { key: 'ViewContent', label: 'ViewContent' },
+                            { key: 'CompleteRegistration', label: 'CompleteRegistration' },
+                            { key: 'StartTrial', label: 'StartTrial' },
+                            { key: 'InitiateCheckout', label: 'InitiateCheckout' },
+                            { key: 'Purchase', label: 'Purchase (Verified)' },
+                            { key: 'Contact', label: 'Contact' },
+                          ].map((evt) => {
+                            const checked = platformTracking.metaPixel.events?.[evt.key] ?? true;
+                            return (
+                              <label
+                                key={evt.key}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
+                                  checked
+                                    ? 'bg-blue-50/70 border-blue-200 text-blue-900'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => setPlatformTracking({
+                                    ...platformTracking,
+                                    metaPixel: {
+                                      ...platformTracking.metaPixel,
+                                      events: {
+                                        ...platformTracking.metaPixel.events,
+                                        [evt.key]: e.target.checked,
+                                      },
+                                    },
+                                  })}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="truncate">{evt.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Connection Test & Diagnostics */}
+                      <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="text-xs text-slate-600 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-slate-700">Last Test:</span>
+                            {platformTracking.metaPixel.diagnostics?.lastTestAt ? (
+                              <span className={`px-2 py-0.5 rounded font-medium ${
+                                platformTracking.metaPixel.diagnostics.lastTestStatus === 'success'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-red-50 text-red-700'
+                              }`}>
+                                {platformTracking.metaPixel.diagnostics.lastTestStatus.toUpperCase()} — {new Date(platformTracking.metaPixel.diagnostics.lastTestAt).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">Not tested yet</span>
+                            )}
+                          </div>
+                          {platformTracking.metaPixel.diagnostics?.lastTestMessage && (
+                            <p className="text-[11px] text-slate-500 max-w-xl">{platformTracking.metaPixel.diagnostics.lastTestMessage}</p>
+                          )}
+                          {platformTracking.metaPixel.diagnostics?.lastEventAt && (
+                            <p className="text-[11px] text-slate-500">
+                              Last Delivery: <strong>{platformTracking.metaPixel.diagnostics.lastEventName}</strong> ({platformTracking.metaPixel.diagnostics.lastEventStatus}) at {new Date(platformTracking.metaPixel.diagnostics.lastEventAt).toLocaleString()}
+                            </p>
+                          )}
+                          {platformTracking.metaPixel.diagnostics?.lastErrorMessage && (
+                            <p className="text-[11px] text-red-600">
+                              Last Error: {platformTracking.metaPixel.diagnostics.lastErrorMessage}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleTestPlatformCapi}
+                          disabled={isTestingCapi}
+                          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shrink-0 disabled:opacity-60 transition-colors"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          {isTestingCapi ? 'Sending Test Event...' : 'Test CAPI Connection'}
+                        </button>
+                      </div>
+
+                      {recentTrackingEvents.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100">
+                          <h5 className="text-xs font-semibold text-slate-700 mb-2">Recent Server CAPI Deliveries</h5>
+                          <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-lg">
+                            <table className="w-full text-[11px] text-left">
+                              <thead className="bg-slate-50 text-slate-500 sticky top-0">
+                                <tr>
+                                  <th className="py-1.5 px-2.5 font-medium">Event</th>
+                                  <th className="py-1.5 px-2.5 font-medium">Status</th>
+                                  <th className="py-1.5 px-2.5 font-medium">HTTP / Trace</th>
+                                  <th className="py-1.5 px-2.5 font-medium">Time</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {recentTrackingEvents.map((ev) => (
+                                  <tr key={ev._id || ev.eventId} className="hover:bg-slate-50/70">
+                                    <td className="py-1.5 px-2.5 font-medium text-slate-800">{ev.eventName}</td>
+                                    <td className="py-1.5 px-2.5">
+                                      <span className={`px-1.5 py-0.5 rounded font-semibold ${
+                                        ev.status === 'sent'
+                                          ? 'bg-emerald-50 text-emerald-700'
+                                          : ev.status === 'retry_scheduled'
+                                          ? 'bg-amber-50 text-amber-700'
+                                          : 'bg-red-50 text-red-700'
+                                      }`}>
+                                        {ev.status}
+                                      </span>
+                                    </td>
+                                    <td className="py-1.5 px-2.5 text-slate-500 truncate max-w-[180px]" title={ev.errorMessage || ev.fbTraceId}>
+                                      {ev.errorMessage ? ev.errorMessage : `${ev.httpStatus || '-'} ${ev.fbTraceId ? `(${ev.fbTraceId.slice(0, 10)})` : ''}`}
+                                    </td>
+                                    <td className="py-1.5 px-2.5 text-slate-400">
+                                      {new Date(ev.sentAt || ev.createdAt).toLocaleTimeString()}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* GTM */}
                   <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-800">Platform Google Tag Manager (GTM)</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-slate-800">Platform Google Tag Manager (GTM)</h3>
+                          <button
+                            type="button"
+                            onClick={() => setTrackingDocModal('gtm')}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+                          >
+                            <HelpCircle className="w-3 h-3" /> How to setup?
+                          </button>
+                        </div>
                         <p className="text-xs text-slate-500">Inject central platform analytics container</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -2049,6 +2484,168 @@ export default function GlobalSettings() {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Platform Tracking Setup Documentation Modal */}
+      {trackingDocModal && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setTrackingDocModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[88vh] flex flex-col overflow-hidden animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Platform Tracking Setup &amp; Credentials Guide</h3>
+                  <p className="text-xs text-slate-500">Step-by-step instructions to find &amp; configure Meta Pixel, CAPI, GA4, and GTM for MASH ECO.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTrackingDocModal(null)}
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Topic Filter Pills */}
+            <div className="px-6 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap bg-white">
+              {[
+                { id: 'all', label: 'Complete Guide' },
+                { id: 'meta_overview', label: 'Meta Pixel + CAPI Flow' },
+                { id: 'pixel_id', label: 'Meta Pixel ID' },
+                { id: 'capi_token', label: 'CAPI Access Token' },
+                { id: 'test_event_code', label: 'Test Event Code' },
+                { id: 'graph_version', label: 'Graph API Version' },
+                { id: 'ga4', label: 'Google Analytics 4' },
+                { id: 'gtm', label: 'Google Tag Manager' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTrackingDocModal(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    trackingDocModal === tab.id
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Documentation Content */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-700 leading-relaxed">
+              {(trackingDocModal === 'all' || trackingDocModal === 'meta_overview') && (
+                <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/50 space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">1. Meta Pixel + Conversions API (CAPI) Setup Checklist</h4>
+                  <ol className="list-decimal list-inside space-y-1.5 text-slate-700">
+                    <li>Open <a href="https://business.facebook.com/events_manager2" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold inline-flex items-center gap-1">Meta Events Manager <ExternalLink className="w-3 h-3" /></a> and select your MASH ECO Business Portfolio.</li>
+                    <li>Select your Dataset / Pixel for MASH ECO (or create a Web Dataset under <strong>Connect Data Sources &rarr; Web</strong>).</li>
+                    <li>Copy the numeric <strong>Dataset / Pixel ID</strong> into <strong>Meta Pixel ID</strong> and turn on the browser Pixel toggle.</li>
+                    <li>Generate a <strong>Conversions API Access Token</strong> (Dataset Settings tab), paste it into <strong>CAPI Access Token</strong>, and turn on <strong>Server-Side CAPI</strong>.</li>
+                    <li>Click <strong>Save Changes</strong> (top right), optionally paste a <strong>Test Event Code</strong>, and click <strong>Test CAPI Connection</strong> to verify events arrive in Meta Events Manager.</li>
+                    <li>Once verified, <strong>clear the Test Event Code</strong> and click <strong>Save Changes</strong> so production events count as live conversions.</li>
+                  </ol>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'pixel_id') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">Where to Find Meta Pixel ID (Dataset ID)</h4>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Go to <a href="https://business.facebook.com/events_manager2" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold inline-flex items-center gap-1">Meta Events Manager <ExternalLink className="w-3 h-3" /></a> &rarr; left menu <strong>Data Sources</strong>.</li>
+                    <li>Click your MASH ECO Web Pixel / Dataset.</li>
+                    <li>Click the <strong>Settings</strong> tab at the top.</li>
+                    <li>Look under <strong>Dataset ID</strong> (previously Pixel ID) — it is a 15–16 digit numeric ID (e.g., <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">2265980240655799</code>). Click it to copy.</li>
+                  </ol>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'capi_token') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">How to Generate a Meta CAPI Access Token</h4>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>In <a href="https://business.facebook.com/events_manager2" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold inline-flex items-center gap-1">Meta Events Manager <ExternalLink className="w-3 h-3" /></a>, select your Dataset &rarr; click the <strong>Settings</strong> tab.</li>
+                    <li>Scroll down to the <strong>Conversions API</strong> section &rarr; <strong>Set up direct integration</strong>.</li>
+                    <li>Click the blue <strong>Generate access token</strong> button (requires Business Manager Admin access).</li>
+                    <li>Copy the long token immediately (starts with <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">EAA...</code>) and paste it into <strong>CAPI Access Token</strong> here, then click <strong>Save Changes</strong>.</li>
+                  </ol>
+                  <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-2 mt-2">
+                    <strong>Security Note:</strong> Your token is encrypted at rest using <strong>AES-256-GCM</strong> and is never exposed back to the browser. You can paste a new token anytime to rotate it.
+                  </p>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'test_event_code') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">Where to Find Test Event Code (For Testing Only)</h4>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>In Meta Events Manager, select your Pixel/Dataset &rarr; click the <strong>Test Events</strong> tab (next to Overview / Settings).</li>
+                    <li>Expand <strong>Confirm your server&apos;s events are set up correctly</strong>.</li>
+                    <li>Copy the code shown (format: <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">TEST12345</code>).</li>
+                    <li>Paste it into <strong>Test Event Code</strong>, click <strong>Save Changes</strong>, keep the Meta <em>Test Events</em> tab open, and click <strong>Test CAPI Connection</strong>.</li>
+                  </ol>
+                  <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                    <strong>Important:</strong> Clear the Test Event Code and save once testing passes! Leaving a test code filled prevents Meta from treating live server events as production conversions.
+                  </p>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'graph_version') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">Which Meta Graph API Version to Select?</h4>
+                  <p>
+                    Leave this on the recommended default (<code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">v21.0</code> or <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">v22.0</code>). All supported versions here work seamlessly with Meta Conversions API. Upgrade only if Meta Business Suite notifies you of an older version deprecation.
+                  </p>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'ga4') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">How to Find Google Analytics 4 (GA4) Measurement ID</h4>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Open <a href="https://analytics.google.com/" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold inline-flex items-center gap-1">Google Analytics <ExternalLink className="w-3 h-3" /></a> &rarr; click <strong>Admin</strong> (gear icon, bottom-left).</li>
+                    <li>Under <em>Data collection and modification</em>, click <strong>Data streams</strong> &rarr; select your Web stream (MASH ECO domain).</li>
+                    <li>Copy the <strong>Measurement ID</strong> (format: <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">G-XXXXXXXXXX</code>), paste it above, toggle GA4 On, and click <strong>Save Changes</strong>.</li>
+                  </ol>
+                </div>
+              )}
+
+              {(trackingDocModal === 'all' || trackingDocModal === 'gtm') && (
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
+                  <h4 className="text-sm font-bold text-slate-900">How to Find Google Tag Manager (GTM) Container ID</h4>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Open <a href="https://tagmanager.google.com/" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold inline-flex items-center gap-1">Google Tag Manager <ExternalLink className="w-3 h-3" /></a> and select your Web container for MASH ECO.</li>
+                    <li>Copy the Container ID shown in the top bar (format: <code className="px-1.5 py-0.5 bg-slate-100 rounded font-mono">GTM-XXXXXXX</code>).</li>
+                    <li>Make sure you click <strong>Submit &rarr; Publish</strong> inside GTM so your tags go live, then paste the ID above and click <strong>Save Changes</strong>.</li>
+                  </ol>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Note: If you already enable Meta Pixel above, avoid firing a duplicate Pixel tag inside GTM to prevent double-counting.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setTrackingDocModal(null)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors"
+              >
+                Got It
+              </button>
+            </div>
           </div>
         </div>
       )}
