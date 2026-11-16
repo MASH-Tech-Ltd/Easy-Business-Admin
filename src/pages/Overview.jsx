@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useGetSuperAdminStatsQuery } from "../store/apiSlice";
 import {
@@ -12,6 +12,13 @@ import {
   ShieldAlert,
   LifeBuoy,
   Database,
+  Download,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import {
   AreaChart,
@@ -79,85 +86,177 @@ const Overview = () => {
     chartData: [],
   };
 
-  const handleDownloadReport = () => {
+  // Pagination state for Transaction History table
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Customize Report Modal state
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState("all"); // 'all' | 'this_month' | 'last_month' | 'this_year' | 'custom'
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
+  const [reportTier, setReportTier] = useState("all"); // 'all' | 'paid_only' | 'free_only'
+  const [reportStatus, setReportStatus] = useState("all"); // 'all' | 'active' | 'expired' | 'cancelled'
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Filtered transactions for custom report download
+  const filteredReportTransactions = useMemo(() => {
+    const list = stats.transactions || [];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return list.filter((trx) => {
+      const d = new Date(trx.date);
+
+      // Period filter
+      if (reportPeriod === "this_month") {
+        if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return false;
+      } else if (reportPeriod === "last_month") {
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const yearOfLastMonth = currentMonth === 0 ? currentYear - 1 : currentYear;
+        if (d.getMonth() !== lastMonth || d.getFullYear() !== yearOfLastMonth) return false;
+      } else if (reportPeriod === "this_year") {
+        if (d.getFullYear() !== currentYear) return false;
+      } else if (reportPeriod === "custom") {
+        if (reportStartDate && d < new Date(reportStartDate + "T00:00:00")) return false;
+        if (reportEndDate) {
+          const endD = new Date(reportEndDate + "T23:59:59.999");
+          if (d > endD) return false;
+        }
+      }
+
+      // Tier filter (include or exclude free tier)
+      const isFree =
+        (trx.packageName || "").toLowerCase().includes("free") ||
+        Number(trx.amount || 0) === 0;
+
+      if (reportTier === "paid_only" && isFree) return false;
+      if (reportTier === "free_only" && !isFree) return false;
+
+      // Status filter
+      if (reportStatus !== "all" && trx.status !== reportStatus) return false;
+
+      return true;
+    });
+  }, [stats.transactions, reportPeriod, reportStartDate, reportEndDate, reportTier, reportStatus]);
+
+  const filteredReportRevenue = useMemo(() => {
+    return filteredReportTransactions.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  }, [filteredReportTransactions]);
+
+  const handleGeneratePdf = () => {
     try {
-      console.log("Starting PDF generation...");
-      
-      // jspdf sometimes needs to be instantiated this way depending on module system
+      setIsGeneratingPdf(true);
       const doc = new jsPDF();
-      
+
       // Title
       doc.setFontSize(22);
-      doc.setTextColor(37, 99, 235); // Blue
-      doc.text("MASH ECO Report", 14, 22);
-      
-      // Subtitle
-      doc.setFontSize(11);
+      doc.setTextColor(37, 99, 235);
+      doc.text("MASH ECO Platform Report", 14, 22);
+
+      // Subtitle with filter criteria
+      const periodLabel =
+        reportPeriod === "this_month"
+          ? "This Month"
+          : reportPeriod === "last_month"
+          ? "Last Month"
+          : reportPeriod === "this_year"
+          ? "This Year"
+          : reportPeriod === "custom"
+          ? `${reportStartDate || "Start"} to ${reportEndDate || "End"}`
+          : "All Time";
+
+      const tierLabel =
+        reportTier === "paid_only"
+          ? "Paid Only (Without Free Tier)"
+          : reportTier === "free_only"
+          ? "Free Tier Only"
+          : "All Plans (Include Free Tier)";
+
+      doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
-      
-      // Summary Stats
-      doc.setFontSize(14);
+      doc.text(
+        `Generated on: ${new Date().toLocaleString()} | Period: ${periodLabel} | Scope: ${tierLabel}`,
+        14,
+        30
+      );
+
+      // Summary Metrics
+      doc.setFontSize(13);
       doc.setTextColor(15, 23, 42);
-      doc.text("Summary Metrics", 14, 45);
-      
-      doc.setFontSize(11);
+      doc.text("Summary Metrics", 14, 42);
+
+      doc.setFontSize(10);
       doc.setTextColor(71, 85, 105);
-      doc.text(`Total Tenants: ${stats.totalTenants || 0}`, 14, 55);
-      doc.text(`Active Packages: ${stats.activePackages || 0}`, 14, 62);
-      doc.text(`Monthly MRR: BDT ${stats.monthlyMRR || 0}`, 14, 69); // removed unicode taka symbol which might break jspdf
-      doc.text(`System Load: ${stats.systemLoad || '0%'}`, 14, 76);
-      
-      doc.text(`Monthly Sales: BDT ${stats.monthlySales || 0}`, 100, 55);
-      doc.text(`Yearly Sales: BDT ${stats.yearlySales || 0}`, 100, 62);
-      doc.text(`Lifetime Sales: BDT ${stats.totalSales || 0}`, 100, 69);
-      
+      doc.text(`Filtered Transactions: ${filteredReportTransactions.length}`, 14, 50);
+      doc.text(`Total Revenue: BDT ${filteredReportRevenue}`, 80, 50);
+      doc.text(`Active Subscriptions: ${stats.activePackages || 0}`, 140, 50);
+
       // Transactions Table
-      if (stats.transactions && stats.transactions.length > 0) {
-        doc.setFontSize(14);
+      if (filteredReportTransactions.length > 0) {
+        doc.setFontSize(13);
         doc.setTextColor(15, 23, 42);
-        doc.text("Transaction History", 14, 95);
-        
+        doc.text("Transaction Details", 14, 62);
+
         const tableColumn = ["Date", "Tenant", "Package", "Addons", "Status", "Amount"];
         const tableRows = [];
-        
-        let totalRevenue = 0;
-        stats.transactions.forEach(trx => {
-          const statusText = trx.status ? (trx.status.charAt(0).toUpperCase() + trx.status.slice(1)) : 'Unknown';
-          const trxData = [
+
+        filteredReportTransactions.forEach((trx) => {
+          const statusText = trx.status ? trx.status.charAt(0).toUpperCase() + trx.status.slice(1) : "Unknown";
+          tableRows.push([
             new Date(trx.date).toLocaleDateString(),
-            trx.tenantName || 'Unknown',
-            trx.packageName || 'Free tier',
-            trx.addons || "N/A",
+            trx.tenantName || "Unknown",
+            trx.packageName || "Free tier",
+            trx.addons || "None",
             statusText,
-            `BDT ${trx.amount || 0}`
-          ];
-          tableRows.push(trxData);
-          totalRevenue += (trx.amount || 0);
+            `BDT ${trx.amount || 0}`,
+          ]);
         });
-        
-        // Add total row
-        tableRows.push([{ content: 'Total Revenue', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `BDT ${totalRevenue}`]);
-        
+
+        // Add total summary row
+        tableRows.push([
+          { content: "Total Revenue", colSpan: 5, styles: { halign: "right", fontStyle: "bold" } },
+          `BDT ${filteredReportRevenue}`,
+        ]);
+
         autoTable(doc, {
           head: [tableColumn],
           body: tableRows,
-          startY: 100,
+          startY: 68,
           styles: { fontSize: 9 },
           headStyles: { fillColor: [37, 99, 235] },
           alternateRowStyles: { fillColor: [248, 250, 252] },
           margin: { top: 10 },
-          theme: 'grid'
+          theme: "grid",
         });
+      } else {
+        doc.setFontSize(11);
+        doc.setTextColor(148, 163, 184);
+        doc.text("No transactions match the selected filter criteria.", 14, 65);
       }
-      
-      doc.save("masheco_Platform_Report.pdf");
-      toast.success("Report downloaded successfully");
+
+      const fileName = `masheco_Report_${reportPeriod}_${reportTier}.pdf`;
+      doc.save(fileName);
+      setIsReportModalOpen(false);
+      toast.success("Custom report downloaded successfully");
     } catch (error) {
       console.error("PDF Generation Error:", error);
       toast.error("Failed to generate PDF report: " + error.message);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
+
+  // Table pagination calculations
+  const allTransactions = stats.transactions || [];
+  const totalTransactions = allTransactions.length;
+  const totalPages = Math.max(1, Math.ceil(totalTransactions / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedTransactions = allTransactions.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   if (loading) {
     return (
@@ -179,9 +278,10 @@ const Overview = () => {
           </p>
         </div>
         <button 
-          onClick={handleDownloadReport}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors"
+          onClick={() => setIsReportModalOpen(true)}
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
         >
+          <Download className="w-4 h-4" />
           Download Report
         </button>
       </div>
@@ -333,7 +433,7 @@ const Overview = () => {
               </tr>
             </thead>
             <tbody>
-              {stats.transactions?.map((trx) => (
+              {paginatedTransactions.map((trx) => (
                 <tr key={trx.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     {new Date(trx.date).toLocaleDateString()}
@@ -384,7 +484,261 @@ const Overview = () => {
             )}
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {totalTransactions > 0 && (
+          <div className="px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-slate-500">
+                Showing{" "}
+                <span className="font-semibold text-slate-700">
+                  {(safeCurrentPage - 1) * pageSize + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-semibold text-slate-700">
+                  {Math.min(safeCurrentPage * pageSize, totalTransactions)}
+                </span>{" "}
+                of <span className="font-semibold text-slate-700">{totalTransactions}</span> transactions
+              </p>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 border-l border-slate-200 pl-3">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    return (
+                      <React.Fragment key={p}>
+                        {prev && p - prev > 1 && (
+                          <span className="px-1 text-slate-400 text-xs">...</span>
+                        )}
+                        <button
+                          onClick={() => setCurrentPage(p)}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                            safeCurrentPage === p
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "border border-slate-200 text-slate-600 hover:bg-white"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage >= totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Customize & Download Report Modal */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden transform transition-all">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Customize Report</h3>
+                  <p className="text-xs text-slate-500">Filter parameters for your PDF export</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* 1. Time Period */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                  1. Time Period
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: "all", label: "All Time" },
+                    { id: "this_month", label: "This Month" },
+                    { id: "last_month", label: "Last Month" },
+                    { id: "this_year", label: "This Year" },
+                    { id: "custom", label: "Custom Range" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setReportPeriod(item.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center ${
+                        reportPeriod === item.id
+                          ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500/30"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Date Pickers */}
+                {reportPeriod === "custom" && (
+                  <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200/70 animate-fade-in">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">From Date</label>
+                      <input
+                        type="date"
+                        value={reportStartDate}
+                        onChange={(e) => setReportStartDate(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">To Date</label>
+                      <input
+                        type="date"
+                        value={reportEndDate}
+                        onChange={(e) => setReportEndDate(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Free Tier / Paid Plans */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                  2. Plan Scope
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: "all", label: "All (Include Free Tier)" },
+                    { id: "paid_only", label: "Paid Only (Without Free)" },
+                    { id: "free_only", label: "Free Tier Only" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setReportTier(item.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center ${
+                        reportTier === item.id
+                          ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500/30"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Status Filter */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                  3. Subscription Status
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: "all", label: "All Statuses" },
+                    { id: "active", label: "Active" },
+                    { id: "expired", label: "Expired" },
+                    { id: "cancelled", label: "Cancelled" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setReportStatus(item.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center ${
+                        reportStatus === item.id
+                          ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500/30"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Preview Summary Card */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-500 block">Matching Records</span>
+                  <span className="text-lg font-bold text-slate-800">
+                    {filteredReportTransactions.length}{" "}
+                    <span className="text-xs font-normal text-slate-500">transactions</span>
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-slate-500 block">Total Revenue</span>
+                  <span className="text-lg font-bold text-emerald-600">
+                    ৳{filteredReportRevenue.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                {isGeneratingPdf ? "Generating..." : "Download PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
