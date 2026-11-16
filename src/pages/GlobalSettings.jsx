@@ -1169,20 +1169,58 @@ export default function GlobalSettings() {
                               <HelpCircle className="w-3 h-3" /> How to get Token?
                             </button>
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5">Send authoritative conversion events directly from backend to Meta Graph API (encrypted at rest via AES-256-GCM).</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Authoritative server conversion events dispatched directly to Meta Graph API (AES-256 encrypted at rest).</p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={platformTracking.metaPixel.capiEnabled}
-                            onChange={(e) => setPlatformTracking({
-                              ...platformTracking,
-                              metaPixel: { ...platformTracking.metaPixel, capiEnabled: e.target.checked }
-                            })}
-                          />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
+
+                        <div className="flex items-center gap-3 self-end sm:self-auto">
+                          {/* Segmented Mode Selector */}
+                          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg text-xs font-medium border border-slate-200/80">
+                            <button
+                              type="button"
+                              onClick={() => setPlatformTracking({
+                                ...platformTracking,
+                                metaPixel: { ...platformTracking.metaPixel, mode: 'live' }
+                              })}
+                              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                                platformTracking.metaPixel.mode === 'live'
+                                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-900'
+                              }`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Live
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPlatformTracking({
+                                ...platformTracking,
+                                metaPixel: { ...platformTracking.metaPixel, mode: 'test' }
+                              })}
+                              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                                platformTracking.metaPixel.mode === 'test'
+                                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-900'
+                              }`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              Test
+                            </button>
+                          </div>
+
+                          {/* Main CAPI Toggle */}
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={platformTracking.metaPixel.capiEnabled}
+                              onChange={(e) => setPlatformTracking({
+                                ...platformTracking,
+                                metaPixel: { ...platformTracking.metaPixel, capiEnabled: e.target.checked }
+                              })}
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1250,7 +1288,16 @@ export default function GlobalSettings() {
 
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-semibold text-slate-700">Test Event Code (Optional)</label>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">Test Event Code</label>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                platformTracking.metaPixel.mode === 'test'
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {platformTracking.metaPixel.mode === 'test' ? 'Active in Test Mode' : 'Inactive in Live Mode'}
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => setTrackingDocModal('test_event_code')}
@@ -1261,15 +1308,27 @@ export default function GlobalSettings() {
                           </div>
                           <input
                             type="text"
-                            placeholder="e.g. TEST12345 (clear when live)"
+                            placeholder={
+                              platformTracking.metaPixel.mode === 'test'
+                                ? 'e.g. TEST12345 (Required for Test Mode)'
+                                : 'e.g. TEST12345 (Switch to Test Mode to activate)'
+                            }
                             value={platformTracking.metaPixel.testEventCode || ''}
                             onChange={(e) => setPlatformTracking({
                               ...platformTracking,
                               metaPixel: { ...platformTracking.metaPixel, testEventCode: e.target.value }
                             })}
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className={`w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 border transition-all ${
+                              platformTracking.metaPixel.mode === 'test'
+                                ? 'border-amber-300 bg-amber-50/20 focus:ring-amber-200'
+                                : 'border-slate-200 bg-slate-50 focus:ring-blue-500/50 opacity-80'
+                            }`}
                           />
-                          <p className="text-[11px] text-slate-400 mt-1">Events with a Test Event Code appear in Meta Events Manager &rarr; Test Events.</p>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            {platformTracking.metaPixel.mode === 'test'
+                              ? 'Events with this Test Code appear in Meta Events Manager → Test Events tab.'
+                              : 'In Live Mode, events are sent directly for ad optimization without test codes.'}
+                          </p>
                         </div>
                       </div>
 
@@ -1362,10 +1421,20 @@ export default function GlobalSettings() {
 
                       {recentTrackingEvents.length > 0 && (
                         <div className="pt-3 border-t border-slate-100">
-                          <h5 className="text-xs font-semibold text-slate-700 mb-2">Recent Server CAPI Deliveries</h5>
-                          <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <h5 className="text-xs font-semibold text-slate-700">Recent Server CAPI Deliveries</h5>
+                              <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                                Latest {recentTrackingEvents.length} Events (Auto-pruned to 100 max)
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              Older events automatically deleted
+                            </span>
+                          </div>
+                          <div className="max-h-64 sm:max-h-80 overflow-y-auto border border-slate-100 rounded-lg">
                             <table className="w-full text-[11px] text-left">
-                              <thead className="bg-slate-50 text-slate-500 sticky top-0">
+                              <thead className="bg-slate-50 text-slate-500 sticky top-0 shadow-2xs">
                                 <tr>
                                   <th className="py-1.5 px-2.5 font-medium">Event</th>
                                   <th className="py-1.5 px-2.5 font-medium">Status</th>
@@ -1391,8 +1460,9 @@ export default function GlobalSettings() {
                                     <td className="py-1.5 px-2.5 text-slate-500 truncate max-w-[180px]" title={ev.errorMessage || ev.fbTraceId}>
                                       {ev.errorMessage ? ev.errorMessage : `${ev.httpStatus || '-'} ${ev.fbTraceId ? `(${ev.fbTraceId.slice(0, 10)})` : ''}`}
                                     </td>
-                                    <td className="py-1.5 px-2.5 text-slate-400">
-                                      {new Date(ev.sentAt || ev.createdAt).toLocaleTimeString()}
+                                    <td className="py-1.5 px-2.5 text-slate-400 whitespace-nowrap">
+                                      {new Date(ev.sentAt || ev.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                                      {new Date(ev.sentAt || ev.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </td>
                                   </tr>
                                 ))}
