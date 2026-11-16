@@ -1,5 +1,6 @@
 import {
   CreditCard,
+  Send,
   Mail,
   DollarSign,
   Clock,
@@ -68,6 +69,27 @@ const Billing = () => {
   // Modals for Revenue & PDF
   const [showRevenueDetailsModal, setShowRevenueDetailsModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [manualWarningModalSub, setManualWarningModalSub] = useState(null);
+  const [sendingManualWarning, setSendingManualWarning] = useState(false);
+
+  const handleSendManualExpiryWarning = async () => {
+    if (!manualWarningModalSub) return;
+    setSendingManualWarning(true);
+    try {
+      const res = await api.post(`/subscriptions/send-expiry-warning/${manualWarningModalSub._id}`);
+      toast.success(
+        res.data?.message || "Expiry warning email & notification sent successfully!"
+      );
+      setManualWarningModalSub(null);
+      if (typeof refetchSubs === "function") refetchSubs();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to send expiry warning notification"
+      );
+    } finally {
+      setSendingManualWarning(false);
+    }
+  };
   const [pdfReportType, setPdfReportType] = useState("monthly"); // 'monthly' | 'yearly' | 'custom'
   const [pdfYear, setPdfYear] = useState(new Date().getFullYear().toString());
   const [pdfMonth, setPdfMonth] = useState((new Date().getMonth() + 1).toString());
@@ -851,7 +873,7 @@ const Billing = () => {
                             })
                           : "-"}
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                         {sub.expiryWarningSent ? (
                           <span
                             className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"
@@ -903,6 +925,16 @@ const Billing = () => {
                             <span>Not Sent</span>
                           </span>
                         )}
+
+                        {/* Send Warning Icon Button */}
+                        <button
+                          type="button"
+                          onClick={() => setManualWarningModalSub(sub)}
+                          className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 hover:border-blue-600 transition-all shadow-2xs cursor-pointer group shrink-0"
+                          title="Manually send expiry warning with real details & time calculation"
+                        >
+                          <Send className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -1531,6 +1563,290 @@ const Billing = () => {
           </div>
         </div>
       )}
+
+      {/* Manual Expiry Warning Modal with Real Details & Time Calculation */}
+      {manualWarningModalSub && (() => {
+        const sub = manualWarningModalSub;
+        const now = new Date();
+        const end = sub.endDate ? new Date(sub.endDate) : null;
+        const start = sub.startDate ? new Date(sub.startDate) : null;
+
+        let diffHours = 0;
+        let daysRemaining = 0;
+        let hoursRemaining = 0;
+        let minutesRemaining = 0;
+        let isExpired = false;
+
+        if (end) {
+          const diffMs = end.getTime() - now.getTime();
+          if (diffMs > 0) {
+            const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+            daysRemaining = Math.floor(totalHours / 24);
+            hoursRemaining = totalHours % 24;
+            minutesRemaining = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            diffHours = totalHours;
+            isExpired = false;
+          } else {
+            isExpired = true;
+            const pastMs = Math.abs(diffMs);
+            const totalHours = Math.floor(pastMs / (1000 * 60 * 60));
+            daysRemaining = Math.floor(totalHours / 24);
+            hoursRemaining = totalHours % 24;
+            diffHours = -totalHours;
+          }
+        }
+
+        const storeName = sub.tenantId?.name || "Unknown Store";
+        const subdomain = sub.tenantId?.subdomain || sub.tenantId?.domain || "-";
+        const recipientEmail =
+          sub.tenantId?.ownerId?.email ||
+          sub.tenantId?.contactEmail ||
+          sub.userId?.email ||
+          sub.tenantId?.email ||
+          "No email address found";
+        const ownerPhone = sub.tenantId?.contactPhone || sub.tenantId?.phone || "-";
+        const planName = sub.isTrial
+          ? "Free Trial (5 Days)"
+          : (sub.packageId?.name || "Standard Package");
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-blue-50/50 via-indigo-50/30 to-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <Send className="w-5 h-5 -rotate-12 translate-x-0.5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base">
+                      Send Expiry Warning Manually
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Real-time duration calculation & merchant notification
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManualWarningModalSub(null)}
+                  disabled={sendingManualWarning}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* 1. Real-Time Calculation Banner */}
+                <div
+                  className={`p-4 rounded-xl border flex items-start gap-3 ${
+                    isExpired
+                      ? "bg-rose-50/80 border-rose-200 text-rose-900"
+                      : diffHours <= 48
+                      ? "bg-amber-50/90 border-amber-200 text-amber-950"
+                      : "bg-blue-50/80 border-blue-200 text-blue-950"
+                  }`}
+                >
+                  <Clock
+                    className={`w-5 h-5 shrink-0 mt-0.5 ${
+                      isExpired
+                        ? "text-rose-600"
+                        : diffHours <= 48
+                        ? "text-amber-600 animate-pulse"
+                        : "text-blue-600"
+                    }`}
+                  />
+                  <div className="text-xs space-y-1">
+                    <div className="font-bold text-sm flex items-center gap-2">
+                      <span>Time Calculation:</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                          isExpired
+                            ? "bg-rose-100 text-rose-700"
+                            : diffHours <= 48
+                            ? "bg-amber-100 text-amber-800 animate-pulse"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {isExpired
+                          ? "Expired"
+                          : diffHours <= 48
+                          ? "Expiring Soon (< 48h)"
+                          : "Active"}
+                      </span>
+                    </div>
+                    <p className="text-slate-700 font-medium">
+                      {isExpired ? (
+                        <>
+                          This subscription ended{" "}
+                          <strong className="text-rose-700 font-bold">
+                            {daysRemaining > 0
+                              ? `${daysRemaining} days, ${hoursRemaining} hours ago`
+                              : `${hoursRemaining} hours ago`}
+                          </strong>{" "}
+                          ({end ? end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""}).
+                        </>
+                      ) : (
+                        <>
+                          Remaining Duration:{" "}
+                          <strong className="text-slate-900 font-bold">
+                            {daysRemaining > 0
+                              ? `${daysRemaining} days, ${hoursRemaining} hours, ${minutesRemaining} minutes`
+                              : `${hoursRemaining} hours, ${minutesRemaining} minutes`}
+                          </strong>{" "}
+                          until expiration.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Merchant & Subscription Real Details */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-xs space-y-2.5">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span>Store & Subscription Details</span>
+                    <span className="font-semibold text-slate-500 normal-case">
+                      ID: {sub._id?.slice(-8)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Tenant / Store Name
+                      </span>
+                      <span className="font-bold text-slate-800 text-sm block truncate">
+                        {storeName}
+                      </span>
+                      <span className="text-slate-500 text-[11px]">{subdomain}.masheco.com</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Package / Plan
+                      </span>
+                      <span className="font-bold text-indigo-700 text-sm block">
+                        {planName}
+                      </span>
+                      <span className="text-slate-500 text-[11px] capitalize">
+                        Status: <strong className="text-slate-700">{sub.status}</strong>
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Recipient Email
+                      </span>
+                      <span className="font-semibold text-blue-700 truncate block text-xs">
+                        {recipientEmail}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Helpline / Phone
+                      </span>
+                      <span className="font-medium text-slate-700 text-xs">
+                        {ownerPhone}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Start Date
+                      </span>
+                      <span className="font-medium text-slate-700 text-xs">
+                        {start ? start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "-"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                        Expire Date
+                      </span>
+                      <span className="font-bold text-rose-700 text-xs">
+                        {end ? end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Notification Dispatch Info */}
+                <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3 text-xs space-y-1.5 text-emerald-950">
+                  <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+                    <Mail className="w-4 h-4 text-emerald-600" />
+                    <span>Notification Channels Dispatched:</span>
+                  </div>
+                  <ul className="list-disc pl-5 space-y-0.5 text-emerald-900/80 text-[11px]">
+                    <li>
+                      <strong>Official Bengali Email</strong> to <code className="text-emerald-800 font-semibold">{recipientEmail}</code> with calculated remaining days & renewal links.
+                    </li>
+                    <li>
+                      <strong>Real-Time In-App Notification</strong> to merchant dashboard notification tray.
+                    </li>
+                  </ul>
+                </div>
+
+                {/* 4. Previous Warning History */}
+                <div className="text-[11px] text-slate-500 bg-slate-100/70 p-2.5 rounded-lg border border-slate-200/60 flex items-center justify-between">
+                  <span>Previous Warning Status:</span>
+                  {sub.expiryWarningSent ? (
+                    <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Warning previously sent on{" "}
+                      {sub.expiryWarningSentAt
+                        ? new Date(sub.expiryWarningSentAt).toLocaleString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Earlier"}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-slate-600">
+                      No warning sent previously
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setManualWarningModalSub(null)}
+                  disabled={sendingManualWarning}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendManualExpiryWarning}
+                  disabled={sendingManualWarning}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-98"
+                >
+                  {sendingManualWarning ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Sending Warning...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send Warning Now</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 };
