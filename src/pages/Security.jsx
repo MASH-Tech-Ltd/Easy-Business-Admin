@@ -191,16 +191,16 @@ export default function Security() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Security & IPs</h2>
           <p className="text-slate-500 mt-1">Manage blocked IPs, users, and security logs.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
           {activeTab === 'visitor-logs' && (
             <button 
               onClick={handleClearVisitorLogs}
-              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="flex-1 sm:flex-initial px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
               Clear Visitor Logs
@@ -208,14 +208,14 @@ export default function Security() {
           )}
           <button 
             onClick={handleSyncCache}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            className="flex-1 sm:flex-initial px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
             Sync IP Cache
           </button>
           <button 
             onClick={() => setIsBlockModalOpen(true)}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-initial cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Block IP Address

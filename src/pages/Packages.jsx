@@ -415,7 +415,7 @@ export default function Packages() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
             Pricing Packages
@@ -424,25 +424,25 @@ export default function Packages() {
             Manage subscription tiers for your clients.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
           {packages.length === 0 && (
             <button
               onClick={generateDefaultPackages}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200 flex-1 sm:flex-initial"
             >
               Generate Default Packages
             </button>
           )}
           <button
             onClick={openCreateModal}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-initial cursor-pointer"
           >
             <Plus className="w-4 h-4" /> New Package
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
         {packages.map((pkg) => (
           <div
             key={pkg._id}

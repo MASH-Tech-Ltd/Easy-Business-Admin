@@ -136,7 +136,7 @@ export default function AffiliateDetails() {
       </div>
 
       {/* Sub-navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto whitespace-nowrap">
         {[
           { id: 'referrals', label: `Referred Merchants (${referrals?.meta?.total || 0})` },
           { id: 'commissions', label: `Commissions (${commissions?.meta?.total || 0})` },
@@ -146,7 +146,7 @@ export default function AffiliateDetails() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
               activeTab === t.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -159,7 +159,8 @@ export default function AffiliateDetails() {
 
       {activeTab === 'referrals' && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase">
                 <th className="py-3 px-4">Store Name</th>
@@ -196,12 +197,14 @@ export default function AffiliateDetails() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {activeTab === 'commissions' && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase">
                 <th className="py-3 px-4">Date</th>
@@ -229,12 +232,14 @@ export default function AffiliateDetails() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {activeTab === 'withdrawals' && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase">
                 <th className="py-3 px-4">Requested Date</th>
@@ -262,12 +267,14 @@ export default function AffiliateDetails() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {activeTab === 'ledger' && (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase">
                 <th className="py-3 px-4">Timestamp</th>
@@ -293,6 +300,7 @@ export default function AffiliateDetails() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

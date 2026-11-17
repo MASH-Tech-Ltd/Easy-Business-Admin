@@ -241,7 +241,7 @@ export default function Clients() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
             Client Management
@@ -252,14 +252,14 @@ export default function Clients() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
         >
           <UserPlus className="w-4 h-4" /> Onboard Client
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-        <div className="relative w-full sm:w-96">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="relative w-full sm:w-80 md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
@@ -269,11 +269,11 @@ export default function Clients() {
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex-1 sm:flex-initial flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
             <Filter className="w-4 h-4 text-slate-500" />
             <select
-              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer w-full"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -282,9 +282,9 @@ export default function Clients() {
               <option value="status">Status</option>
             </select>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+          <div className="flex-1 sm:flex-initial flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
             <select
-              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer w-full"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
             >
@@ -296,7 +296,8 @@ export default function Clients() {
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
           <thead className="bg-slate-100/50 text-slate-500 text-sm font-medium">
             <tr>
               <th className="px-6 py-4">Store Name</th>
@@ -526,7 +527,7 @@ export default function Clients() {
             {clients.length === 0 && (
               <tr>
                 <td
-                  colSpan="5"
+                  colSpan="10"
                   className="px-6 py-8 text-center text-slate-500"
                 >
                   No clients found matching your criteria.
@@ -535,6 +536,7 @@ export default function Clients() {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination Footer */}
         {meta.total > 0 && (
@@ -574,13 +576,13 @@ export default function Clients() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl transform transition-all">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-slate-800 mb-6">
               Onboard New Client
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Store Name
@@ -1190,8 +1192,8 @@ export default function Clients() {
       )}
 
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all text-center">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all text-center max-h-[90vh] overflow-y-auto">
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-8 h-8" />
             </div>
@@ -1249,8 +1251,8 @@ export default function Clients() {
       )}
 
       {isDeleteProductsModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all text-center">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all text-center max-h-[90vh] overflow-y-auto">
             <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <PackageMinus className="w-8 h-8" />
             </div>

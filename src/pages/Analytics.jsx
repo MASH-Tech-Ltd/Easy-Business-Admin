@@ -380,7 +380,7 @@ export default function Analytics() {
       </div>
 
       {/* Global Overview Cards (6 Cards) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {/* Total Store Visits */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">

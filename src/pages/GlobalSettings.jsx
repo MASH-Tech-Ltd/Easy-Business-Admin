@@ -664,8 +664,8 @@ export default function GlobalSettings() {
   };
 
   return (
-    <div className="space-y-8 w-full animate-fade-in pb-12">
-      <div className="mb-8 flex justify-between items-end">
+    <div className="space-y-6 sm:space-y-8 w-full animate-fade-in pb-12">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Global Settings</h1>
           <p className="text-slate-500 mt-1 text-sm">Configure core platform configurations, default limits, platform tracking, and payment accounts.</p>
@@ -673,103 +673,103 @@ export default function GlobalSettings() {
         <button 
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-70"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-70 w-full sm:w-auto shrink-0 cursor-pointer"
         >
           {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Navigation */}
-        <div className="w-full lg:w-64 flex-shrink-0 space-y-2">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Sidebar Navigation - Scrollable horizontal tabs on mobile, vertical on desktop */}
+        <div className="w-full lg:w-64 flex-shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-visible gap-2 pb-2 lg:pb-0">
           <button 
             onClick={() => setActiveTab('general')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'general' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Globe className={`w-5 h-5 ${activeTab === 'general' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Globe className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'general' ? 'text-blue-600' : 'text-slate-400'}`} />
             General Settings
           </button>
           <button 
             onClick={() => setActiveTab('system')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'system' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Server className={`w-5 h-5 ${activeTab === 'system' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Server className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'system' ? 'text-blue-600' : 'text-slate-400'}`} />
             System & Limits
           </button>
           <button 
             onClick={() => setActiveTab('security')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'security' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Shield className={`w-5 h-5 ${activeTab === 'security' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Shield className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'security' ? 'text-blue-600' : 'text-slate-400'}`} />
             Security Rules
           </button>
           <button 
             onClick={() => setActiveTab('tracking')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'tracking' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Activity className={`w-5 h-5 ${activeTab === 'tracking' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Activity className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'tracking' ? 'text-blue-600' : 'text-slate-400'}`} />
             Platform Tracking
           </button>
           <button 
             onClick={() => setActiveTab('themes')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'themes' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Palette className={`w-5 h-5 ${activeTab === 'themes' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Palette className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'themes' ? 'text-blue-600' : 'text-slate-400'}`} />
             Theme Preview Links
           </button>
           <button 
             onClick={() => setActiveTab('payments')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'payments' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Wallet className={`w-5 h-5 ${activeTab === 'payments' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Wallet className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'payments' ? 'text-blue-600' : 'text-slate-400'}`} />
             Platform Payment Accounts
           </button>
           <button 
             onClick={() => setActiveTab('couriers')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'couriers' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Truck className={`w-5 h-5 ${activeTab === 'couriers' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Truck className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'couriers' ? 'text-blue-600' : 'text-slate-400'}`} />
             Couriers Setup
           </button>
           <button 
             onClick={() => setActiveTab('social')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'social' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Share2 className={`w-5 h-5 ${activeTab === 'social' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Share2 className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'social' ? 'text-blue-600' : 'text-slate-400'}`} />
             Social Media Links
           </button>
           <button 
             onClick={() => setActiveTab('affiliate')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
               activeTab === 'affiliate' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Users className={`w-5 h-5 ${activeTab === 'affiliate' ? 'text-blue-600' : 'text-slate-400'}`} />
+            <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'affiliate' ? 'text-blue-600' : 'text-slate-400'}`} />
             Affiliate Program
           </button>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden min-h-[500px]">
+        <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden min-h-[500px]">
           {activeTab === 'general' && (
-            <div className="p-8 space-y-6 animate-fade-in">
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
               <h2 className="text-lg font-semibold text-slate-800 mb-6 border-b border-slate-100 pb-4">General Platform Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1432,7 +1432,7 @@ export default function GlobalSettings() {
                               Older events automatically deleted
                             </span>
                           </div>
-                          <div className="max-h-64 sm:max-h-80 overflow-y-auto border border-slate-100 rounded-lg">
+                          <div className="max-h-64 sm:max-h-80 overflow-y-auto overflow-x-auto border border-slate-100 rounded-lg">
                             <table className="w-full text-[11px] text-left">
                               <thead className="bg-slate-50 text-slate-500 sticky top-0 shadow-2xs">
                                 <tr>

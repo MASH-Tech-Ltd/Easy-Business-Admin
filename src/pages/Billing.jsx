@@ -465,7 +465,7 @@ const Billing = () => {
   const activeCount = subscriptions.filter((s) => s.status === "active").length;
 
   return (
-    <div className="space-y-8 w-full pb-10">
+    <div className="space-y-6 sm:space-y-8 w-full pb-10">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
           Billing & Subscriptions
@@ -475,7 +475,7 @@ const Billing = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="flex justify-between mb-2">
             <h3 className="font-semibold text-slate-600">Total Merchants</h3>
@@ -579,7 +579,7 @@ const Billing = () => {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between bg-slate-50 gap-4">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between bg-slate-50 gap-4">
           <h3 className="font-bold text-slate-800 text-lg whitespace-nowrap">
             Subscription Management
           </h3>

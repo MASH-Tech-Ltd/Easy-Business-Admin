@@ -152,24 +152,24 @@ export default function Addons() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Add-on Packages</h2>
           <p className="text-slate-500 mt-1">Manage extra features and services available to merchants.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
           {addons.length === 0 && (
-            <button onClick={generateDefaultAddons} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200">
+            <button onClick={generateDefaultAddons} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200 flex-1 sm:flex-initial">
               Generate Default Add-ons
             </button>
           )}
-          <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
+          <button onClick={openCreateModal} className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-initial cursor-pointer">
             <Plus className="w-4 h-4" /> New Add-on
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
         {addons.map((addon) => (
           <div key={addon._id} className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-xl relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 flex flex-col">
             <div className={`absolute top-0 left-0 right-0 h-1.5 ${addon.billingCycle === 'monthly' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : addon.billingCycle === 'yearly' ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}></div>

@@ -19,7 +19,7 @@ export default function Logs() {
 
   return (
     <div className="space-y-6 w-full h-full flex flex-col">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Server Logs</h2>
           <p className="text-slate-500 text-sm mt-1">Live streaming application and server logs.</p>
@@ -38,7 +38,7 @@ export default function Logs() {
         </div>
         <div className="p-4 overflow-y-auto font-mono text-xs flex-1">
           {logs.map((log, i) => (
-            <div key={i} className="mb-1 flex gap-4 hover:bg-white/5 px-2 py-0.5 rounded">
+            <div key={i} className="mb-1 flex flex-col sm:flex-row gap-1 sm:gap-4 hover:bg-white/5 px-2 py-1 sm:py-0.5 rounded break-all sm:break-normal">
               <span className="text-slate-500 shrink-0">{log.timestamp || new Date().toISOString()}</span>
               <span className={`shrink-0 font-bold ${log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARN' ? 'text-yellow-400' : 'text-blue-400'}`}>
                 [{log.level || 'INFO'}]

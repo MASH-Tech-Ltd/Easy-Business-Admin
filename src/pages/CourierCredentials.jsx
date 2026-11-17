@@ -33,14 +33,14 @@ export default function CourierCredentials() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Key className="w-6 h-6 text-blue-600" /> Courier API Credentials
           </h2>
           <p className="text-gray-500 mt-1 text-sm">Monitor connected courier APIs for all merchant stores. Tokens are decrypted for admin view.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
           <button 
             onClick={async () => {
               const toastId = toast.loading('Syncing statuses globally...');

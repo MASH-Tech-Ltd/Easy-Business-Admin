@@ -210,25 +210,25 @@ export default function SupportDetails() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-[calc(100vh-100px)] flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/support')}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">{ticket.subject} (ID: {ticket.ticketId})</h1>
-            <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{ticket.subject} (ID: {ticket.ticketId})</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs sm:text-sm text-slate-500">
               <span>{ticket.tenantId?.name}</span>
               <span>•</span>
               <span>{new Date(ticket.createdAt).toLocaleString()}</span>
             </div>
           </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <select
             value={ticket.priority}
             onChange={(e) => handlePriorityChange(e.target.value)}

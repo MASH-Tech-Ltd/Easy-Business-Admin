@@ -373,7 +373,7 @@ export default function Database() {
                 {backupFiles.map((file, idx) => (
                   <div
                     key={idx}
-                    className="border border-[#e8ddd0] rounded-xl p-3.5 bg-[#fcfaf7] flex items-center justify-between gap-4 hover:border-[#8B6914] transition-all shadow-sm"
+                    className="border border-[#e8ddd0] rounded-xl p-3.5 bg-[#fcfaf7] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:border-[#8B6914] transition-all shadow-sm"
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="w-9 h-9 rounded-lg bg-[#f5f0e8] border border-[#e8ddd0] flex items-center justify-center text-[#8B6914] shrink-0">

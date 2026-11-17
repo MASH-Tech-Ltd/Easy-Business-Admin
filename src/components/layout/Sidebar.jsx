@@ -25,6 +25,7 @@ import {
   Gift,
   BookOpen,
   BarChart2,
+  X,
 } from "lucide-react";
 
 const Badge = ({ children, type = "NEW" }) => (
@@ -37,7 +38,7 @@ const Badge = ({ children, type = "NEW" }) => (
   </span>
 );
 
-const SidebarItem = ({ item }) => {
+const SidebarItem = ({ item, onItemClick }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const location = useLocation();
 
@@ -86,6 +87,7 @@ const SidebarItem = ({ item }) => {
               <NavLink
                 key={sub.name}
                 to={sub.path}
+                onClick={onItemClick}
                 className={({ isActive: subActive }) =>
                   `flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
                     subActive
@@ -111,6 +113,7 @@ const SidebarItem = ({ item }) => {
   return (
     <NavLink
       to={item.path}
+      onClick={onItemClick}
       className={({ isActive }) =>
         `flex items-center px-3 py-2 rounded-lg text-sm transition-colors group ${
           isActive
@@ -132,7 +135,7 @@ const SidebarItem = ({ item }) => {
   );
 };
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -362,23 +365,39 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-[260px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden">
-      <div className="h-16 flex flex-col justify-center px-6 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <img
-            src="/masheco-logo.png"
-            alt="MASH ECO"
-            className="w-8 h-8 object-contain"
-          />
-          <h1 className="text-2xl font-righteous text-slate-800 tracking-tight leading-none">
-            MASH ECO
-          </h1>
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 w-[270px] lg:w-[260px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+      }`}
+    >
+      <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 flex-shrink-0">
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-2">
+            <img
+              src="/masheco-logo.png"
+              alt="MASH ECO"
+              className="w-8 h-8 object-contain"
+            />
+            <h1 className="text-2xl font-righteous text-slate-800 tracking-tight leading-none">
+              MASH ECO
+            </h1>
+          </div>
+          <div className="pl-10 -mt-0.5">
+            <span className="text-[9px] font-bold text-blue-400 tracking-[0.25em] uppercase leading-none">
+              SUPER ADMIN
+            </span>
+          </div>
         </div>
-        <div className="pl-10 -mt-0.5">
-          <span className="text-[9px] font-bold text-blue-400 tracking-[0.25em] uppercase leading-none">
-            SUPER ADMIN
-          </span>
-        </div>
+
+        {/* Mobile close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          aria-label="Close navigation"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
@@ -393,16 +412,17 @@ export default function Sidebar() {
             )}
             <nav className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <SidebarItem key={item.name} item={item} />
+                <SidebarItem key={item.name} item={item} onItemClick={onClose} />
               ))}
             </nav>
           </div>
         ))}
       </div>
 
-      <div className="p-4 border-t border-slate-100 bg-white space-y-1">
+      <div className="p-4 border-t border-slate-100 bg-white space-y-1 shrink-0">
         <NavLink
           to="/settings"
+          onClick={onClose}
           className={({ isActive }) =>
             `flex items-center px-3 py-2 w-full rounded-lg text-sm transition-colors group ${
               isActive
@@ -422,7 +442,7 @@ export default function Sidebar() {
         </NavLink>
         <button
           onClick={handleLogout}
-          className="flex items-center px-3 py-2 w-full rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors group"
+          className="flex items-center px-3 py-2 w-full rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors group cursor-pointer"
         >
           <LogOut className="w-4 h-4 mr-3 text-red-500 group-hover:text-red-600" />
           <span>Sign Out</span>

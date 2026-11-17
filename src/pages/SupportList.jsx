@@ -135,7 +135,7 @@ export default function SupportList() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500 mb-1">
@@ -189,8 +189,8 @@ export default function SupportList() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl gap-4 flex-wrap">
-          <div className="relative w-72">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-slate-50 rounded-t-xl gap-3 sm:gap-4">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"

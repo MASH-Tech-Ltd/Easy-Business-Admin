@@ -45,14 +45,14 @@ export default function FraudChecks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-[#5022C3]" /> Global Fraud Checks
           </h2>
           <p className="text-gray-500 mt-1 text-sm">Monitor fraud detection activities across all tenant stores.</p>
         </div>
-        <button onClick={fetchChecks} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        <button onClick={fetchChecks} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors self-end sm:self-auto cursor-pointer">
           <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>

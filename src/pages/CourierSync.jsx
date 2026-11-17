@@ -302,7 +302,7 @@ export default function CourierSync() {
     <div className="space-y-6">
       {/* ── Header ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow">
             <Truck className="w-6 h-6 text-white" />
           </div>
@@ -313,7 +313,7 @@ export default function CourierSync() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
           {report && (
             <button
               id="btn-clear-sync-history"
@@ -397,7 +397,7 @@ export default function CourierSync() {
           </div>
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <StatCard icon={Package}     label="Orders Checked" value={report.synced}           color="slate" />
             <StatCard icon={TrendingUp}  label="Status Updated" value={report.updated}           color="green"  sub="Saved to DB" />
             <StatCard icon={SkipForward} label="Skipped"        value={report.skipped}           color="orange" />
@@ -429,7 +429,7 @@ export default function CourierSync() {
           {/* Tabbed Report */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50/50">
+            <div className="flex border-b border-slate-200 bg-slate-50/50 overflow-x-auto whitespace-nowrap">
               <button
                 id="tab-courier-updated"
                 onClick={() => setActiveTab('updated')}

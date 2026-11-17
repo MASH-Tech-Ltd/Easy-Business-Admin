@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useGetSuperAdminStatsQuery } from "../store/apiSlice";
 import {
@@ -267,8 +267,8 @@ const Overview = () => {
   }
 
   return (
-    <div className="space-y-8 w-full">
-      <div className="flex justify-between items-end">
+    <div className="space-y-6 sm:space-y-8 w-full">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             Dashboard Overview
@@ -279,14 +279,14 @@ const Overview = () => {
         </div>
         <button 
           onClick={() => setIsReportModalOpen(true)}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
         >
           <Download className="w-4 h-4" />
           Download Report
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total Tenants"
           value={stats.totalTenants}
@@ -416,7 +416,7 @@ const Overview = () => {
       </div>
 
       {/* Transaction History */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mt-6">
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm mt-6">
         <h3 className="text-base font-semibold text-slate-800 mb-4">
           Transaction History
         </h3>
