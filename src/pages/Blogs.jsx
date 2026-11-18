@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../utils/api";
 import { toast } from "react-toastify";
 import { useSocket } from "../context/SocketContext";
+import VisualNotepadEditor from "../components/VisualNotepadEditor";
 import {
   FileText,
   Plus,
@@ -65,10 +66,11 @@ export default function Blogs() {
     featured: false,
   });
 
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const fileInputRef = useRef(null);
 
-  const handleImageFileChange = async (e) => {
+  const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -82,39 +84,23 @@ export default function Blogs() {
       return;
     }
 
-    setUploadingImage(true);
-    const toastId = toast.loading("Uploading thumbnail image to server...");
-
-    try {
-      const fd = new FormData();
-      fd.append("image", file);
-
-      const res = await api.post("/blogs/upload-image", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (res.data?.success || res.data?.status === "ok") {
-        const uploadedUrl = res.data.data?.url || res.data.data?.secure_url;
-        setFormData((prev) => ({ ...prev, thumbnail: uploadedUrl }));
-        toast.update(toastId, {
-          render: "Thumbnail image uploaded successfully!",
-          type: "success",
-          isLoading: false,
-          autoClose: 2500,
-        });
-      }
-    } catch (err) {
-      console.error("Failed to upload image:", err);
-      toast.update(toastId, {
-        render: err.response?.data?.message || "Failed to upload image",
-        type: "error",
-        isLoading: false,
-        autoClose: 3000,
-      });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
     }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    toast.info("Image selected! It will be uploaded to backend when you save.", { autoClose: 2500 });
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImageFile(null);
+    setImagePreview("");
+    setFormData((prev) => ({ ...prev, thumbnail: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const fetchBlogs = useCallback(async (page = meta.page) => {
@@ -158,7 +144,12 @@ export default function Blogs() {
   }, [socket, fetchBlogs, meta.page]);
 
   const handleOpenCreateModal = () => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setEditId(null);
+    setImageFile(null);
+    setImagePreview("");
     setFormData({
       title: "",
       excerpt: "",
@@ -176,7 +167,12 @@ export default function Blogs() {
   };
 
   const handleOpenEditModal = (blog) => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setEditId(blog._id);
+    setImageFile(null);
+    setImagePreview(blog.thumbnail || "");
     setFormData({
       title: blog.title || "",
       excerpt: blog.excerpt || "",
@@ -195,34 +191,72 @@ export default function Blogs() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.excerpt || !formData.content) {
+    if (!formData.title?.trim() || !formData.excerpt?.trim() || !formData.content?.trim()) {
       toast.warning("Title, excerpt, and content are required!");
       return;
     }
 
     setSubmitting(true);
     try {
-      const payload = {
-        ...formData,
-        tags: typeof formData.tags === "string"
-          ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean)
-          : formData.tags,
-      };
-
       let res;
-      if (editId) {
-        res = await api.patch(`/blogs/update-blog/${editId}`, payload);
+      if (imageFile) {
+        // Send multipart form with image file — backend uploads to Cloudinary directly
+        const fd = new FormData();
+        fd.append("title", formData.title.trim());
+        fd.append("excerpt", formData.excerpt.trim());
+        fd.append("content", formData.content.trim());
+        fd.append("category", formData.category);
+        fd.append("author", formData.author);
+        fd.append("authorRole", formData.authorRole);
+        fd.append("readTime", formData.readTime);
+        fd.append("isPublished", String(formData.isPublished));
+        fd.append("featured", String(formData.featured));
+        fd.append("image", imageFile);
+
+        const tagsArr = typeof formData.tags === "string"
+          ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean)
+          : formData.tags;
+        fd.append("tags", JSON.stringify(tagsArr));
+
+        if (editId) {
+          res = await api.patch(`/blogs/update-blog/${editId}`, fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } else {
+          res = await api.post("/blogs/create-blog", fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        }
       } else {
-        res = await api.post("/blogs/create-blog", payload);
+        // Standard payload with existing or direct image URL
+        const payload = {
+          ...formData,
+          thumbnail: imagePreview || formData.thumbnail || "",
+          tags: typeof formData.tags === "string"
+            ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : formData.tags,
+        };
+
+        if (editId) {
+          res = await api.patch(`/blogs/update-blog/${editId}`, payload);
+        } else {
+          res = await api.post("/blogs/create-blog", payload);
+        }
       }
 
       if (res.data?.success || res.data?.status === "ok") {
         toast.success(editId ? "Article updated successfully!" : "Article published successfully!");
+        if (imagePreview && imagePreview.startsWith("blob:")) {
+          URL.revokeObjectURL(imagePreview);
+        }
         setIsModalOpen(false);
         setEditId(null);
+        setImageFile(null);
+        setImagePreview("");
         fetchBlogs(meta.page);
       }
     } catch (err) {
+      console.error("Failed to save article:", err);
       toast.error(err.response?.data?.message || "Failed to save article");
     } finally {
       setSubmitting(false);
@@ -760,23 +794,13 @@ export default function Blogs() {
                 />
               </div>
 
-              {/* Content Body */}
+              {/* Content Body - Visual Notepad Editor */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Article Body / Markdown Content *
-                  </label>
-                  <span className="text-[11px] text-slate-400">
-                    Supports Markdown: ## Headings, lists, bold text
-                  </span>
-                </div>
-                <textarea
-                  required
-                  rows={10}
-                  placeholder="Write the full article content here. You can use markdown headings (##), bold (**text**), bullet points (- item)..."
+                <VisualNotepadEditor
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  onChange={(val) => setFormData((prev) => ({ ...prev, content: val }))}
+                  placeholder="Start writing article content here just like in a notepad..."
+                  minHeight="260px"
                 />
               </div>
 
@@ -788,7 +812,7 @@ export default function Blogs() {
                       Thumbnail Image / Cover Image
                     </label>
                     <span className="text-[11px] text-slate-400">
-                      Upload from computer or paste direct link
+                      Select from computer (uploaded on save) or paste link
                     </span>
                   </div>
 
@@ -801,12 +825,12 @@ export default function Blogs() {
                     className="hidden"
                   />
 
-                  {formData.thumbnail ? (
+                  {imagePreview ? (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div className="w-full sm:w-36 h-24 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0 relative shadow-2xs">
                           <img
-                            src={formData.thumbnail}
+                            src={imagePreview}
                             alt="Cover Preview"
                             className="w-full h-full object-cover"
                           />
@@ -814,33 +838,25 @@ export default function Blogs() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" /> Image Uploaded
+                              <CheckCircle2 className="w-3 h-3" />
+                              {imageFile ? "Selected (Will upload to backend on save)" : "Current Cover"}
                             </span>
                           </div>
                           <p className="text-xs text-slate-600 truncate font-mono">
-                            {formData.thumbnail}
+                            {imageFile ? imageFile.name : imagePreview}
                           </p>
                           <div className="flex items-center gap-2 mt-2.5">
                             <button
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
-                              disabled={uploadingImage}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5"
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
                             >
                               <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                              <span>{uploadingImage ? "Uploading..." : "Change Image"}</span>
+                              <span>Change Image</span>
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
-                                const prevUrl = formData.thumbnail;
-                                setFormData({ ...formData, thumbnail: "" });
-                                if (prevUrl && prevUrl.includes("cloudinary.com")) {
-                                  try {
-                                    await api.post("/blogs/delete-image", { url: prevUrl });
-                                  } catch (e) {}
-                                }
-                              }}
+                              onClick={handleRemoveImage}
                               className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             >
                               Remove
@@ -851,35 +867,23 @@ export default function Blogs() {
                     </div>
                   ) : (
                     <div
-                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
-                        uploadingImage
-                          ? "border-blue-400 bg-blue-50/40 cursor-wait"
-                          : "border-slate-300 hover:border-blue-500 hover:bg-slate-50/80 bg-white"
-                      }`}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 border-slate-300 hover:border-blue-500 hover:bg-slate-50/80 bg-white"
                     >
-                      {uploadingImage ? (
-                        <div className="py-2">
-                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-                          <p className="text-sm font-bold text-blue-700">Uploading image to cloud...</p>
-                          <p className="text-xs text-slate-400 mt-0.5">Please wait a moment</p>
+                      <div>
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2.5 shadow-2xs">
+                          <UploadCloud className="w-6 h-6" />
                         </div>
-                      ) : (
-                        <div>
-                          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2.5 shadow-2xs">
-                            <UploadCloud className="w-6 h-6" />
-                          </div>
-                          <p className="text-sm font-bold text-slate-800">
-                            Click here to upload image from your computer
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            PNG, JPG, JPEG or WEBP (Max 10MB)
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-1.5 italic">
-                            Leave blank to use sleek MASH ECO gradient cover
-                          </p>
-                        </div>
-                      )}
+                        <p className="text-sm font-bold text-slate-800">
+                          Click here to select image from your computer
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          PNG, JPG, JPEG or WEBP (Max 10MB)
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-1.5 italic">
+                          Uploaded directly to backend on save, or leave blank to use sleek gradient cover
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -889,7 +893,13 @@ export default function Blogs() {
                       type="url"
                       placeholder="Or enter direct image URL link (e.g. https://...)"
                       value={formData.thumbnail}
-                      onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({ ...prev, thumbnail: val }));
+                        if (!imageFile) {
+                          setImagePreview(val);
+                        }
+                      }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 bg-slate-50/60 focus:bg-white transition-colors"
                     />
                   </div>
