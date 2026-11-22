@@ -1,9 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen, Video, Play } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
 import ConfirmModal from '../components/ConfirmModal';
+
+const DEFAULT_DEMO_VIDEOS = [
+  { pageId: 'dashboard', pageName: 'Dashboard', path: '/dashboard', section: 'Main', youtubeUrl: '', isActive: true, title: 'Dashboard Overview & Metrics', description: 'Learn how to monitor store performance, key metrics and sales overview.' },
+  { pageId: 'orders', pageName: 'Orders Management', path: '/dashboard/orders', section: 'Main', youtubeUrl: '', isActive: true, title: 'Managing Orders & Statuses', description: 'Process orders, update fulfillment statuses, and manage invoices.' },
+  { pageId: 'manualOrders', pageName: 'Manual Order', path: '/dashboard/manual-orders', section: 'Main', youtubeUrl: '', isActive: true, title: 'Creating Manual Orders', description: 'Step-by-step tutorial to create manual orders on behalf of phone or social customers.' },
+  { pageId: 'products', pageName: 'Products Management', path: '/dashboard/products', section: 'Main', youtubeUrl: '', isActive: true, title: 'Adding & Managing Products', description: 'Create products, configure variants, inventory, and image galleries.' },
+  { pageId: 'categories', pageName: 'Categories', path: '/dashboard/categories', section: 'Main', youtubeUrl: '', isActive: true, title: 'Product Categories', description: 'Organize catalog into main and sub-categories for easy browsing.' },
+  { pageId: 'customers', pageName: 'Customers', path: '/dashboard/customers', section: 'Main', youtubeUrl: '', isActive: true, title: 'Customer Directory & Retention', description: 'View customer purchase histories, orders count, and loyalty metrics.' },
+  { pageId: 'courier', pageName: 'Courier Automation', path: '/dashboard/courier-automation', section: 'Main', youtubeUrl: '', isActive: true, title: 'Courier Integration & Automation', description: 'Integrate Steadfast, Pathao & RedX for one-click consignment dispatch.' },
+  { pageId: 'fraudCheck', pageName: 'Fraud Check', path: '/dashboard/fraud-check', section: 'Main', youtubeUrl: '', isActive: true, title: 'Fraud Detection & Risk Analysis', description: 'Detect high-risk orders, fake buyers and delivery failure patterns.' },
+  { pageId: 'checkoutLeads', pageName: 'Checkout Leads', path: '/dashboard/checkout-leads', section: 'Main', youtubeUrl: '', isActive: true, title: 'Abandoned Checkout Recovery', description: 'View dropped checkouts and follow up with interested buyers to boost conversions.' },
+  { pageId: 'blockedPhones', pageName: 'Blocked Phones', path: '/dashboard/blocked-phones', section: 'Main', youtubeUrl: '', isActive: true, title: 'Blacklisting Suspicious Phone Numbers', description: 'Blacklist fraudulent numbers to prevent fake and spam orders.' },
+  { pageId: 'notifications', pageName: 'Notifications', path: '/dashboard/notifications', section: 'Main', youtubeUrl: '', isActive: true, title: 'Store Activity & Notifications', description: 'Manage real-time alerts for orders, stock levels, and store activities.' },
+
+  { pageId: 'impressions', pageName: 'Impressions & Clicks', path: '/dashboard/impressions', section: 'Shop & Growth', youtubeUrl: '', isActive: true, title: 'Store Traffic & Product Impressions', description: 'Analyze impressions, clicks and click-through rates across products.' },
+  { pageId: 'analytics', pageName: 'Analytics', path: '/dashboard/analytics', section: 'Shop & Growth', youtubeUrl: '', isActive: true, title: 'Sales & Growth Analytics', description: 'Deep dive into revenue trends, top-selling products, and conversion stats.' },
+  { pageId: 'pixels', pageName: 'Tracking & Pixels', path: '/dashboard/pixels', section: 'Shop & Growth', youtubeUrl: '', isActive: true, title: 'Facebook Pixel & Server CAPI', description: 'Configure Meta Pixel, Conversion API (CAPI), and Google Tag Manager.' },
+  { pageId: 'themes', pageName: 'Themes', path: '/dashboard/themes', section: 'Shop & Growth', youtubeUrl: '', isActive: true, title: 'Storefront Themes & Branding', description: 'Browse, preview, and apply storefront themes to match your brand style.' },
+  { pageId: 'referAndEarn', pageName: 'Refer & Earn (৳)', path: '/dashboard/refer-and-earn', section: 'Shop & Growth', youtubeUrl: '', isActive: true, title: 'Merchant Referral Program', description: 'Earn points and subscription discounts by inviting fellow store owners.' },
+
+  { pageId: 'profile', pageName: 'Profile', path: '/dashboard/profile', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Store Profile & Branding', description: 'Update store logo, business contacts, and social media handles.' },
+  { pageId: 'security', pageName: 'Security & 2FA', path: '/dashboard/security', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Security & Authentication', description: 'Manage passwords, two-factor authentication, and active login sessions.' },
+  { pageId: 'domain', pageName: 'Domain', path: '/dashboard/domain', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Custom Domain Setup', description: 'Connect and verify custom domains with CNAME & DNS record guidance.' },
+  { pageId: 'apiKeys', pageName: 'API Keys', path: '/dashboard/api-keys', section: 'Settings', youtubeUrl: '', isActive: true, title: 'API Keys & Developer Integrations', description: 'Generate secure API credentials for third-party developer integrations.' },
+  { pageId: 'paymentMethods', pageName: 'Payment Methods', path: '/dashboard/payment-methods', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Payment Gateway Configuration', description: 'Set up Cash on Delivery, bKash, Nagad, Rocket, and manual payment accounts.' },
+  { pageId: 'support', pageName: 'Support', path: '/dashboard/support', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Support Tickets Helpdesk', description: 'Open support tickets and get help from our 24/7 technical team.' },
+  { pageId: 'subscription', pageName: 'Subscription', path: '/dashboard/subscription', section: 'Settings', youtubeUrl: '', isActive: true, title: 'Plans & Subscription Billing', description: 'Review plan quotas, upgrade plans, buy add-ons, and view payment invoices.' },
+];
+
+const extractYouTubeId = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (trimmed.includes('youtube.com/embed/')) {
+    return trimmed.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0] || null;
+  }
+  const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch && shortMatch[1]) return shortMatch[1];
+  const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch && watchMatch[1]) return watchMatch[1];
+  const shortsMatch = trimmed.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shortsMatch && shortsMatch[1]) return shortsMatch[1];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  return null;
+};
 
 export default function GlobalSettings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -87,6 +131,22 @@ export default function GlobalSettings() {
         onWithdrawalRejected: true,
       },
     },
+    demoVideosMasterEnabled: true,
+    demoVideos: DEFAULT_DEMO_VIDEOS,
+  });
+
+  const [videoSearchQuery, setVideoSearchQuery] = useState('');
+  const [videoSectionFilter, setVideoSectionFilter] = useState('all');
+  const [previewingVideo, setPreviewingVideo] = useState(null);
+  const [newCustomVideoModal, setNewCustomVideoModal] = useState(false);
+  const [customVideoForm, setCustomVideoForm] = useState({
+    pageName: '',
+    path: '',
+    section: 'Main',
+    youtubeUrl: '',
+    title: '',
+    description: '',
+    isActive: true,
   });
 
   const [themePreviews, setThemePreviews] = useState({
@@ -231,6 +291,28 @@ export default function GlobalSettings() {
               onWithdrawalRejected: data.affiliateSettings?.notifications?.onWithdrawalRejected !== false,
             },
           },
+          demoVideosMasterEnabled: data.demoVideosMasterEnabled !== false,
+          demoVideos: (() => {
+            if (!Array.isArray(data.demoVideos) || data.demoVideos.length === 0) {
+              return DEFAULT_DEMO_VIDEOS;
+            }
+            const merged = [...data.demoVideos];
+            DEFAULT_DEMO_VIDEOS.forEach((defItem) => {
+              const existingIdx = merged.findIndex(i => i.pageId === defItem.pageId || i.path === defItem.path);
+              if (existingIdx === -1) {
+                merged.push(defItem);
+              } else {
+                merged[existingIdx] = {
+                  ...defItem,
+                  ...merged[existingIdx],
+                  pageName: merged[existingIdx].pageName || defItem.pageName,
+                  section: merged[existingIdx].section || defItem.section,
+                  path: merged[existingIdx].path || defItem.path,
+                };
+              }
+            });
+            return merged;
+          })(),
         });
         if (data.themePreviews) {
           setThemePreviews({
@@ -373,7 +455,7 @@ export default function GlobalSettings() {
       fetchPlatformTracking();
     } else if (activeTab === 'payments') {
       fetchPlatformPayments();
-    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers' || activeTab === 'social' || activeTab === 'affiliate') {
+    } else if (activeTab === 'general' || activeTab === 'system' || activeTab === 'security' || activeTab === 'themes' || activeTab === 'couriers' || activeTab === 'social' || activeTab === 'affiliate' || activeTab === 'videos') {
       fetchGlobalSettings();
     }
   }, [activeTab]);
@@ -766,6 +848,15 @@ export default function GlobalSettings() {
           >
             <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'affiliate' ? 'text-blue-600' : 'text-slate-400'}`} />
             Affiliate Program
+          </button>
+          <button 
+            onClick={() => setActiveTab('videos')}
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
+              activeTab === 'videos' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Video className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'videos' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Demonstration Videos
           </button>
         </div>
 
@@ -2428,6 +2519,411 @@ export default function GlobalSettings() {
               </div>
             </div>
           )}
+
+          {activeTab === 'videos' && (
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-800">
+                      Merchant Dashboard Demonstration Videos
+                    </h2>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1 max-w-2xl">
+                    Configure YouTube demonstration and tutorial videos for each merchant sidebar page.
+                    When a valid YouTube link is provided and active, a floating video player button will conditionally appear at the bottom-right corner of that merchant page.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Conditional Rendering Active
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNewCustomVideoModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-semibold transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Custom Page
+                  </button>
+                </div>
+              </div>
+
+              {/* Master Platform Switch Card */}
+              <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-5 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-bold text-sm tracking-wide">
+                      Master Switch: Enable Demonstration Videos Platform-wide
+                    </h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      formData.demoVideosMasterEnabled
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {formData.demoVideosMasterEnabled ? '● Global System Active' : '○ Master Switch Off'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 max-w-xl">
+                    Toggle to immediately show or hide all demonstration videos across all merchant hub pages. If disabled, no floating video button will be rendered for any merchant.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData.demoVideosMasterEnabled}
+                    onChange={(e) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        demoVideosMasterEnabled: e.target.checked,
+                      }));
+                    }}
+                  />
+                  <div className="w-14 h-7 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
+              {/* Stats Overview */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                {(() => {
+                  const videos = formData.demoVideos || [];
+                  const total = videos.length;
+                  const liveCount = videos.filter(v => formData.demoVideosMasterEnabled && v.isActive && extractYouTubeId(v.youtubeUrl)).length;
+                  const disabledCount = videos.filter(v => (!v.isActive || !formData.demoVideosMasterEnabled) && extractYouTubeId(v.youtubeUrl)).length;
+                  const emptyCount = videos.filter(v => !extractYouTubeId(v.youtubeUrl)).length;
+
+                  return [
+                    { label: 'Total Pages', count: total, color: 'text-slate-800 bg-slate-50 border-slate-200' },
+                    { label: 'Live in Merchant Hub', count: liveCount, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+                    { label: 'Disabled by Admin', count: disabledCount, color: 'text-amber-700 bg-amber-50 border-amber-200' },
+                    { label: 'Needs YouTube Link', count: emptyCount, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+                  ].map((stat, idx) => (
+                    <div key={idx} className={`p-3.5 rounded-xl border ${stat.color} flex flex-col`}>
+                      <span className="text-[11px] font-semibold text-slate-500">{stat.label}</span>
+                      <span className="text-xl font-bold tracking-tight mt-0.5">{stat.count}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* Search & Filter Toolbar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  {['all', 'Main', 'Shop & Growth', 'Settings'].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setVideoSectionFilter(sec)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                        videoSectionFilter === sec
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {sec === 'all' ? 'All Sections' : sec}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <input
+                    type="text"
+                    placeholder="Search page or route (e.g. products)..."
+                    value={videoSearchQuery}
+                    onChange={(e) => setVideoSearchQuery(e.target.value)}
+                    className="w-full pl-3.5 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-all"
+                  />
+                  {videoSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Video Items List */}
+              <div className="space-y-4">
+                {(() => {
+                  const videos = formData.demoVideos || [];
+                  const filtered = videos.filter((item) => {
+                    const matchesSection = videoSectionFilter === 'all' || item.section === videoSectionFilter;
+                    const matchesQuery = !videoSearchQuery || 
+                      item.pageName.toLowerCase().includes(videoSearchQuery.toLowerCase()) ||
+                      item.path.toLowerCase().includes(videoSearchQuery.toLowerCase()) ||
+                      (item.title && item.title.toLowerCase().includes(videoSearchQuery.toLowerCase()));
+                    return matchesSection && matchesQuery;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-12 border border-dashed border-slate-200 rounded-2xl p-6">
+                        <Video className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-slate-700">No pages found matching filter</p>
+                        <p className="text-xs text-slate-400 mt-1">Try clearing your search query or section filter</p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((item) => {
+                    const actualIndex = (formData.demoVideos || []).findIndex(v => v.pageId === item.pageId || v.path === item.path);
+                    const ytId = extractYouTubeId(item.youtubeUrl);
+                    const isConfigured = Boolean(ytId);
+                    const isLive = Boolean(formData.demoVideosMasterEnabled && item.isActive && isConfigured);
+
+                    return (
+                      <div
+                        key={item.pageId || item.path}
+                        className={`p-4 sm:p-5 border rounded-2xl bg-white transition-all shadow-2xs hover:border-blue-300 ${
+                          isLive
+                            ? 'border-emerald-200/80 bg-gradient-to-r from-emerald-50/20 to-white'
+                            : isConfigured && !item.isActive
+                            ? 'border-amber-200/80 bg-amber-50/10'
+                            : 'border-slate-200/90'
+                        }`}
+                      >
+                        {/* Top Row: Page Info, Status Badge & Toggle */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
+                              {item.section || 'Main'}
+                            </span>
+                            <h3 className="font-bold text-slate-800 text-sm">
+                              {item.pageName}
+                            </h3>
+                            <code className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
+                              {item.path}
+                            </code>
+                            <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                              isLive
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                : isConfigured && !item.isActive
+                                ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}>
+                              {isLive
+                                ? '● Live in Merchant Hub'
+                                : isConfigured && !item.isActive
+                                ? '○ Disabled by Admin'
+                                : '○ No Video Link (Hidden)'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 self-end sm:self-auto">
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={item.isActive}
+                                onChange={(e) => {
+                                  const updated = [...(formData.demoVideos || [])];
+                                  if (actualIndex !== -1) {
+                                    updated[actualIndex] = {
+                                      ...updated[actualIndex],
+                                      isActive: e.target.checked,
+                                    };
+                                    setFormData(prev => ({ ...prev, demoVideos: updated }));
+                                  }
+                                }}
+                              />
+                              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                              <span className="ml-2 text-xs font-semibold text-slate-700">
+                                {item.isActive ? 'Active' : 'Disabled'}
+                              </span>
+                            </label>
+
+                            {/* Delete custom page if not in default */}
+                            {!DEFAULT_DEMO_VIDEOS.some(d => d.pageId === item.pageId) && (
+                              <button
+                                type="button"
+                                title="Delete Custom Page Route"
+                                onClick={() => {
+                                  const updated = (formData.demoVideos || []).filter(v => v.pageId !== item.pageId);
+                                  setFormData(prev => ({ ...prev, demoVideos: updated }));
+                                  toast.info(`Removed ${item.pageName}`);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 transition-colors"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inputs Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+                          {/* YouTube URL input */}
+                          <div className="lg:col-span-6 space-y-1">
+                            <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3.5 h-3.5 rounded-full bg-red-600 text-white flex items-center justify-center text-[9px] font-black">▶</span>
+                                YouTube Demonstration Link
+                              </span>
+                              {ytId && (
+                                <span className="text-[10px] font-mono text-emerald-600 font-bold">
+                                  ID: {ytId}
+                                </span>
+                              )}
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="url"
+                                placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                                value={item.youtubeUrl || ''}
+                                onChange={(e) => {
+                                  const updated = [...(formData.demoVideos || [])];
+                                  if (actualIndex !== -1) {
+                                    updated[actualIndex] = {
+                                      ...updated[actualIndex],
+                                      youtubeUrl: e.target.value,
+                                    };
+                                    setFormData(prev => ({ ...prev, demoVideos: updated }));
+                                  }
+                                }}
+                                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-all"
+                              />
+                              {item.youtubeUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...(formData.demoVideos || [])];
+                                    if (actualIndex !== -1) {
+                                      updated[actualIndex] = {
+                                        ...updated[actualIndex],
+                                        youtubeUrl: '',
+                                      };
+                                      setFormData(prev => ({ ...prev, demoVideos: updated }));
+                                    }
+                                  }}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                                  title="Clear link"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Custom Video Title input */}
+                          <div className="lg:col-span-4 space-y-1">
+                            <label className="text-xs font-semibold text-slate-700">
+                              Custom Modal Title (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={`e.g. How to use ${item.pageName}`}
+                              value={item.title || ''}
+                              onChange={(e) => {
+                                const updated = [...(formData.demoVideos || [])];
+                                if (actualIndex !== -1) {
+                                  updated[actualIndex] = {
+                                    ...updated[actualIndex],
+                                    title: e.target.value,
+                                  };
+                                  setFormData(prev => ({ ...prev, demoVideos: updated }));
+                                }
+                              }}
+                              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-all"
+                            />
+                          </div>
+
+                          {/* Action Buttons & Thumbnail */}
+                          <div className="lg:col-span-2 flex items-center gap-2 pt-5">
+                            {isConfigured ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewingVideo(item)}
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+                                  title="Preview Demonstration Video"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                  <span>Preview</span>
+                                </button>
+                                <a
+                                  href={`https://www.youtube.com/watch?v=${ytId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl border border-slate-200 transition-colors"
+                                  title="Open in YouTube"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-400 rounded-xl text-xs font-semibold border border-slate-200 cursor-not-allowed opacity-70"
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                <span>No Link</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Thumbnail Bar if link configured */}
+                        {isConfigured && ytId && (
+                          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                                alt={item.pageName}
+                                className="w-14 h-9 object-cover rounded-md border border-slate-200 shadow-2xs"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              <div>
+                                <span className="font-semibold text-slate-700 block text-[11px]">
+                                  {item.title || `${item.pageName} Tutorial Video`}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  https://youtu.be/{ytId}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[11px] text-emerald-600 font-medium">
+                              Ready for Merchant Hub
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Bottom Info & Save Callout */}
+              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+                <div className="flex items-start gap-2.5">
+                  <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Conditional Rendering Principle:</strong> If a page has no YouTube link or is toggled to Inactive, no button or script will render on that merchant dashboard page. Only active links will show a corner video demonstration button.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={handleSave}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Video Settings</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2728,6 +3224,212 @@ export default function GlobalSettings() {
                 Got It
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Demonstration Video Preview Modal */}
+      {previewingVideo && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setPreviewingVideo(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center text-white text-xs font-black">
+                  ▶
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold truncate">
+                    {previewingVideo.title || `${previewingVideo.pageName} - Demonstration Video`}
+                  </h3>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {previewingVideo.path}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewingVideo(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative aspect-video w-full bg-black">
+              {extractYouTubeId(previewingVideo.youtubeUrl) ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${extractYouTubeId(previewingVideo.youtubeUrl)}?autoplay=1&rel=0`}
+                  title={previewingVideo.title || previewingVideo.pageName}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                  Invalid YouTube URL
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span>This is how the demonstration video will appear in Merchant Hub.</span>
+              <button
+                type="button"
+                onClick={() => setPreviewingVideo(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Custom Page Route Modal */}
+      {newCustomVideoModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setNewCustomVideoModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <Video className="w-5 h-5 text-red-600" />
+                Add Custom Page Tutorial
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNewCustomVideoModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!customVideoForm.pageName.trim() || !customVideoForm.path.trim()) {
+                  toast.error('Page Name and Path are required');
+                  return;
+                }
+                const cleanPath = customVideoForm.path.startsWith('/')
+                  ? customVideoForm.path.trim()
+                  : `/${customVideoForm.path.trim()}`;
+                const newId = `custom_${Date.now()}`;
+                const newVideo = {
+                  pageId: newId,
+                  pageName: customVideoForm.pageName.trim(),
+                  path: cleanPath,
+                  section: customVideoForm.section || 'Main',
+                  youtubeUrl: customVideoForm.youtubeUrl.trim(),
+                  title: customVideoForm.title.trim(),
+                  description: customVideoForm.description.trim(),
+                  isActive: customVideoForm.isActive,
+                };
+                setFormData(prev => ({
+                  ...prev,
+                  demoVideos: [...(prev.demoVideos || []), newVideo],
+                }));
+                setNewCustomVideoModal(false);
+                setCustomVideoForm({
+                  pageName: '',
+                  path: '',
+                  section: 'Main',
+                  youtubeUrl: '',
+                  title: '',
+                  description: '',
+                  isActive: true,
+                });
+                toast.success('Custom page tutorial added! Click Save Changes to publish.');
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Page Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Bulk Importer"
+                  value={customVideoForm.pageName}
+                  onChange={(e) => setCustomVideoForm({ ...customVideoForm, pageName: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500/30 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Route Path *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. /dashboard/bulk-importer"
+                  value={customVideoForm.path}
+                  onChange={(e) => setCustomVideoForm({ ...customVideoForm, path: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500/30 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Section</label>
+                <select
+                  value={customVideoForm.section}
+                  onChange={(e) => setCustomVideoForm({ ...customVideoForm, section: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500/30 outline-none"
+                >
+                  <option value="Main">Main</option>
+                  <option value="Shop & Growth">Shop & Growth</option>
+                  <option value="Settings">Settings</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">YouTube URL</label>
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={customVideoForm.youtubeUrl}
+                  onChange={(e) => setCustomVideoForm({ ...customVideoForm, youtubeUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500/30 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Custom Modal Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. How to use Bulk Importer"
+                  value={customVideoForm.title}
+                  onChange={(e) => setCustomVideoForm({ ...customVideoForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500/30 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setNewCustomVideoModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+                >
+                  Add Page
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
