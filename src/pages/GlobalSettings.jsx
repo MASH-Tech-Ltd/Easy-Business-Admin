@@ -95,6 +95,7 @@ export default function GlobalSettings() {
     'design-03': '',
     'design-04': '',
     'design-05': '',
+    'design-06': '',
   });
 
   const [demoStoresStatus, setDemoStoresStatus] = useState({});
@@ -238,6 +239,7 @@ export default function GlobalSettings() {
             'design-03': data.themePreviews['design-03'] || '',
             'design-04': data.themePreviews['design-04'] || '',
             'design-05': data.themePreviews['design-05'] || '',
+            'design-06': data.themePreviews['design-06'] || '',
           });
         }
       }
@@ -594,10 +596,11 @@ export default function GlobalSettings() {
           'design-03': '',
           'design-04': '',
           'design-05': '',
+          'design-06': '',
         });
         setDemoStoresStatus(prev => {
           const updated = { ...prev };
-          ['design-01', 'design-02', 'design-03', 'design-04', 'design-05'].forEach(tid => {
+          ['design-01', 'design-02', 'design-03', 'design-04', 'design-05', 'design-06'].forEach(tid => {
             updated[tid] = { ...(updated[tid] || {}), isSeeded: false, categoriesCount: 0, productsCount: 0, previewUrl: '' };
           });
           return updated;
@@ -1758,6 +1761,15 @@ export default function GlobalSettings() {
                       color: '#000000',
                       desc: 'Exclusive premium storefront aesthetics for flagship electronics and luxury gadgets.',
                       placeholder: 'http://store5.localhost:3000 or https://store5.masheco.com'
+                    },
+                    {
+                      id: 'design-06',
+                      subdomain: 'store6',
+                      name: 'Design 06 (Boutique Elegance)',
+                      badge: 'Luxury Fashion & Couture',
+                      color: '#0b0f17',
+                      desc: 'High-fashion boutique aesthetics with portrait cards, hero collection slider and clean luxury layout.',
+                      placeholder: 'http://store6.localhost:3000 or https://store6.masheco.com'
                     },
                   ].map((themeItem) => (
                     <div 
