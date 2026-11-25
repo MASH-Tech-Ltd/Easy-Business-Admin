@@ -19,6 +19,7 @@ import {
   Layers,
   Calendar,
 } from "lucide-react";
+import ClientActivityDetails from "../components/ClientActivityDetails";
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
 export default function Clients() {
@@ -1168,6 +1169,7 @@ export default function Clients() {
                       </div>
                     )}
                   </div>
+                  {activeClient?._id && (<ClientActivityDetails tenantId={activeClient._id} storeName={activeClient.name} />)}
                 </div>
               </div>
 
