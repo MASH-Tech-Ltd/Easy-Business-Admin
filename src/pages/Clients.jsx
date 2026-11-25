@@ -20,6 +20,7 @@ import {
   Calendar,
 } from "lucide-react";
 import ClientActivityDetails from "../components/ClientActivityDetails";
+import ClientOrdersView from "../components/ClientOrdersView";
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
 export default function Clients() {
@@ -76,6 +77,7 @@ export default function Clients() {
     showDemoSeed: true,
   });
 
+  const [detailsView, setDetailsView] = useState(null); // orders | leads | customers
   const [activeMetrics, setActiveMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsFilter, setMetricsFilter] = useState("lifetime");
@@ -892,7 +894,7 @@ export default function Clients() {
 
                         {/* Order Pipeline */}
                         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Order Pipeline</p>
+                           <div className="flex items-center justify-between mb-3"><p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Order Pipeline</p><button type="button" onClick={() => setDetailsView("orders")} className="px-3 py-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">View Details</button></div>
                            <div className="grid grid-cols-4 gap-2 text-center">
                              <div className="bg-slate-50 rounded-lg py-2 border border-slate-100">
                                 <p className="text-sm font-bold text-slate-700">{activeMetrics.advancedAnalytics.pipeline?.pending || 0}</p>
@@ -1121,9 +1123,7 @@ export default function Clients() {
 
                             {activeMetrics.subscription.purchasedAddons?.length > 0 && (
                               <div className="mt-3">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                  Add-on Usage
-                                </p>
+                                <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Add-on Usage</p><button type="button" onClick={() => setDetailsView("leads")} title="Abandoned checkout details" className="px-3 py-1 text-[11px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">View Details</button></div>
                                 <div className="space-y-3">
                                   {activeMetrics.subscription.purchasedAddons.map((addon, idx) => (
                                     <div key={idx}>
@@ -1169,7 +1169,7 @@ export default function Clients() {
                       </div>
                     )}
                   </div>
-                  {activeClient?._id && (<ClientActivityDetails tenantId={activeClient._id} storeName={activeClient.name} />)}
+                  {activeClient?._id && (<div className="mt-6 border-t border-slate-200/60 pt-5 space-y-3"><h4 className="font-semibold text-slate-800 text-sm uppercase tracking-wide">Customers</h4><div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm"><span className="text-sm font-medium text-slate-700">Customer Details</span><button type="button" onClick={() => setDetailsView("customers")} className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">View Details</button></div></div>)}
                 </div>
               </div>
 
@@ -1308,6 +1308,8 @@ export default function Clients() {
           </div>
         </div>
       )}
+      {detailsView === "orders" && activeClient && (<ClientOrdersView tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
+      {(detailsView === "leads" || detailsView === "customers") && activeClient && (<ClientActivityDetails type={detailsView} tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
     </div>
   );
 }

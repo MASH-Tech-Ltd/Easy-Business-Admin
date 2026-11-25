@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../utils/api";
-import { Users, ShoppingCart, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CONFIG = {
   customers: {
@@ -15,8 +15,7 @@ const CONFIG = {
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleString() : "-");
 
-export default function ClientActivityDetails({ tenantId, storeName }) {
-  const [type, setType] = useState(null); // 'customers' | 'leads' | null
+export default function ClientActivityDetails({ type, tenantId, storeName, onClose }) {
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -51,17 +50,7 @@ export default function ClientActivityDetails({ tenantId, storeName }) {
     load();
   }, [load]);
 
-  const open = (t) => {
-    setRows([]);
-    setMeta(null);
-    setPage(1);
-    setSearch("");
-    setSearchInput("");
-    setStatus("all");
-    setType(t);
-  };
-
-  const close = () => setType(null);
+  const close = () => onClose && onClose();
 
   const submitSearch = (e) => {
     e.preventDefault();
@@ -71,36 +60,6 @@ export default function ClientActivityDetails({ tenantId, storeName }) {
 
   return (
     <>
-      <div className="mt-6 border-t border-slate-200/60 pt-5 space-y-3">
-        <h4 className="font-semibold text-slate-800 text-sm uppercase tracking-wide">
-          Customers &amp; Checkout Activity
-        </h4>
-        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Users className="w-4 h-4 text-blue-600" /> Customers
-          </div>
-          <button
-            type="button"
-            onClick={() => open("customers")}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            View Details
-          </button>
-        </div>
-        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <ShoppingCart className="w-4 h-4 text-orange-500" /> Abandoned Checkouts
-          </div>
-          <button
-            type="button"
-            onClick={() => open("leads")}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            View Details
-          </button>
-        </div>
-      </div>
-
       {type && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
