@@ -19,8 +19,8 @@ import {
   Layers,
   Calendar,
 } from "lucide-react";
-import ClientActivityDetails from "../components/ClientActivityDetails";
-import ClientOrdersView from "../components/ClientOrdersView";
+import { OrdersModal, CustomersModal, LeadsModal } from "../components/clientDetails";
+
 import { useGetAllTenantsQuery } from "../store/apiSlice";
 
 export default function Clients() {
@@ -1308,8 +1308,9 @@ export default function Clients() {
           </div>
         </div>
       )}
-      {detailsView === "orders" && activeClient && (<ClientOrdersView tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
-      {(detailsView === "leads" || detailsView === "customers") && activeClient && (<ClientActivityDetails type={detailsView} tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
+      {activeClient && detailsView === "orders" && (<OrdersModal tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
+      {activeClient && detailsView === "customers" && (<CustomersModal tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
+      {activeClient && detailsView === "leads" && (<LeadsModal tenantId={activeClient._id} storeName={activeClient.name} onClose={() => setDetailsView(null)} />)}
     </div>
   );
 }
