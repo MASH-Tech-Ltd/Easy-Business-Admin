@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Phone,
   Users,
+  RotateCcw,
 } from 'lucide-react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
@@ -42,6 +43,7 @@ export default function SmsNotificationPanel() {
   const [directPhone, setDirectPhone] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
   const [activeTab, setActiveTab] = useState('logs');
 
   const fetchBalance = async () => {
@@ -133,6 +135,25 @@ export default function SmsNotificationPanel() {
       toast.error(err?.response?.data?.message || 'Failed to send SMS');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleResend = async (logId) => {
+    setResendingId(logId);
+    try {
+      const res = await api.post(`/notifications/sms/resend/${logId}`);
+      const updated = res.data?.data;
+      if (updated?.status === 'sent') {
+        toast.success('SMS resent successfully!');
+      } else {
+        toast.error(updated?.providerMessage || 'SMS resend failed');
+      }
+      fetchLogs();
+      fetchBalance();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to resend SMS');
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -449,7 +470,8 @@ export default function SmsNotificationPanel() {
                       <th className="py-2.5 px-3 font-bold">Type</th>
                       <th className="py-2.5 px-3 font-bold">Recipient</th>
                       <th className="py-2.5 px-3 font-bold">Message</th>
-                      <th className="py-2.5 px-4 font-bold">Time</th>
+                      <th className="py-2.5 px-3 font-bold">Time</th>
+                      <th className="py-2.5 px-4 font-bold text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -461,9 +483,19 @@ export default function SmsNotificationPanel() {
                               <CheckCircle2 className="w-3 h-3" /> Sent
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200/70">
-                              <XCircle className="w-3 h-3" /> Failed
-                            </span>
+                            <div>
+                              <span
+                                title={log.providerMessage || 'Failed'}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200/70"
+                              >
+                                <XCircle className="w-3 h-3" /> Failed
+                              </span>
+                              {log.providerMessage && (
+                                <p className="text-[10px] text-rose-500 mt-0.5 max-w-[160px] truncate" title={log.providerMessage}>
+                                  {log.providerMessage}
+                                </p>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-2.5 px-3">
@@ -482,8 +514,23 @@ export default function SmsNotificationPanel() {
                           <div className="text-[11px] font-mono text-slate-400">{log.phone}</div>
                         </td>
                         <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">{log.message}</td>
-                        <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
                           {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          {log.status === 'failed' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleResend(log._id)}
+                              disabled={resendingId === log._id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold disabled:opacity-50 cursor-pointer"
+                            >
+                              <RotateCcw className={`w-3 h-3 ${resendingId === log._id ? 'animate-spin' : ''}`} />
+                              <span>{resendingId === log._id ? 'Sending...' : 'Resend'}</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-300">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import SmsNotificationPanel from '../components/SmsNotificationPanel';
 import { 
-  Bell, Search, Filter, CheckCircle, RefreshCw, AlertCircle, Calendar, ChevronLeft, ChevronRight, X 
+  Bell, Search, Filter, CheckCircle, RefreshCw, AlertCircle, Calendar, ChevronLeft, ChevronRight, X, MessageSquare 
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function Notifications() {
+  const [activeSection, setActiveSection] = useState('system');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -90,27 +91,60 @@ export default function Notifications() {
           </h1>
           <p className="text-gray-500 mt-1">Manage and view all your system alerts and messages.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={fetchNotifications}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button 
-            onClick={markAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Mark all read
-          </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => setActiveSection('system')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'system'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>System Alerts</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('sms')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'sms'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>SMS Gateway</span>
+            </button>
+          </div>
+
+          {activeSection === 'system' && (
+            <>
+              <button 
+                onClick={fetchNotifications}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button 
+                onClick={markAllAsRead}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Mark all read
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <SmsNotificationPanel />
-
-      {/* Filters & Search */}
+      {activeSection === 'sms' ? (
+        <SmsNotificationPanel />
+      ) : (
+        <>
+          {/* Filters & Search */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-96 flex-shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -266,6 +300,8 @@ export default function Notifications() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
