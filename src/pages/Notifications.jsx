@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import SmsNotificationPanel from '../components/SmsNotificationPanel';
 import { 
   Bell, Search, Filter, CheckCircle, RefreshCw, AlertCircle, Calendar, ChevronLeft, ChevronRight, X 
 } from 'lucide-react';
@@ -106,6 +107,8 @@ export default function Notifications() {
           </button>
         </div>
       </div>
+
+      <SmsNotificationPanel />
 
       {/* Filters & Search */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
