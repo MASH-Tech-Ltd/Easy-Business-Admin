@@ -1,6 +1,7 @@
 import { useSocket } from "../context/SocketContext";
 import { useState, useEffect } from "react";
 import api from "../utils/api";
+import ClientMediaUsageCard from "../components/ClientMediaUsageCard";
 import { toast } from "react-toastify";
 import {
   UserPlus,
@@ -928,6 +929,7 @@ export default function Clients() {
                              </div>
                            </div>
                         )}
+                        <ClientMediaUsageCard tenantId={activeClient?._id} />
                       </div>
                     ) : (
                       <div className="text-slate-400 text-sm italic">

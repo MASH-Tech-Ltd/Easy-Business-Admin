@@ -25,6 +25,7 @@ import {
   Gift,
   BookOpen,
   BarChart2,
+  HardDrive,
   X,
 } from "lucide-react";
 
@@ -291,6 +292,7 @@ export default function Sidebar({ isOpen, onClose }) {
       title: "Tenant Management",
       items: [
         { name: "Analytics & Tracking", path: "/analytics", icon: BarChart2 },
+        { name: "Media & Storage", path: "/media-storage", icon: HardDrive },
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
         {
