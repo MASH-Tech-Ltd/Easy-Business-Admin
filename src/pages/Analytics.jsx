@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
+import MediaUsageSection from '../components/MediaUsageSection';
 
 const DATE_RANGES = [
   { label: 'Today', value: 'today' },
@@ -954,6 +955,8 @@ export default function Analytics() {
           </div>
         </div>
       )}
+
+      <MediaUsageSection />
     </div>
   );
 }
