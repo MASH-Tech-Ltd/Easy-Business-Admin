@@ -133,7 +133,7 @@ export default function MediaUsageSection() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredMerchants.map((m) => {
-                const limit = m.baseLimitBytes || 2 * 1024 * 1024 * 1024;
+                const limit = m.baseLimitBytes ?? 0;
                 const pct = limit > 0 ? Math.min(100, (m.totalBytes / limit) * 100).toFixed(2) : '0';
                 return (
                   <tr key={m.tenantId} className="hover:bg-slate-50/70">
@@ -144,7 +144,7 @@ export default function MediaUsageSection() {
                     <td className="py-2.5 px-3 text-slate-700">
                       <div className="font-semibold">{formatBytes(m.r2Bytes)}</div>
                       <div className="text-[11px] text-slate-400">
-                        {pct}% of {formatBytes(limit)}
+                        {limit > 0 ? `${pct}% of ${formatBytes(limit)}` : 'Unlimited'}
                       </div>
                     </td>
                     <td className="py-2.5 px-3 text-slate-700">

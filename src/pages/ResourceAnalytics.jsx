@@ -557,66 +557,179 @@ export default function ResourceAnalytics() {
       </div>
 
       {/* Merchant Detail Modal */}
-      {selectedTenant && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-800">
-                Merchant Resource Breakdown
-              </h3>
-              <button
-                onClick={() => setSelectedTenant(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50">
-                <div className="text-slate-400">Storage Used / Limit</div>
-                <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.storage?.usedBytes)} /{" "}
-                  {selectedTenant.storage?.limitBytes
-                    ? fmt(selectedTenant.storage.limitBytes)
-                    : "Unlimited"}
+      {selectedTenant && (() => {
+        const st = selectedTenant.storage || {};
+        const ib = selectedTenant.imageBandwidth || {};
+        const gb = selectedTenant.generalBandwidth || {};
+        const cb = selectedTenant.combined || {};
+        const tDaily = (selectedTenant.daily || []).map((d) => ({
+          date: d.date?.slice(5) || d.date,
+          imageMB: Math.round(((d.imageBytes || 0) / MB) * 100) / 100,
+          generalMB: Math.round(((d.generalBytes || 0) / MB) * 100) / 100,
+        }));
+        const tHist = selectedTenant.history || [];
+        const tAddons = selectedTenant.activeAddons || [];
+        const barCol = (pct) => (pct >= 100 ? 'bg-red-500' : pct >= 95 ? 'bg-orange-500' : pct >= 85 ? 'bg-amber-500' : 'bg-indigo-600');
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Merchant Resource Usage</h3>
+                  <p className="text-xs text-slate-500">
+                    Period <strong>{selectedTenant.period}</strong> &bull; Plan:{' '}
+                    <strong>{selectedTenant.package?.name || 'Default'}</strong>
+                    {selectedTenant.dataThrough && ` • Synced through ${new Date(selectedTenant.dataThrough).toLocaleString()}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => reconcileTenant(selectedTenant.tenantId)}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer"
+                  >
+                    Reconcile Storage from Inventory
+                  </button>
+                  <button onClick={() => setSelectedTenant(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <div className="text-slate-400">Image Bandwidth</div>
-                <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.imageBandwidth?.usedBytes)} /{" "}
-                  {selectedTenant.imageBandwidth?.limitBytes
-                    ? fmt(selectedTenant.imageBandwidth.limitBytes)
-                    : "Unlimited"}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <HardDrive className="w-4 h-4 text-indigo-600" /> Image Storage
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                      {st.limitBytes > 0 ? `${st.percent}%` : 'Unlimited'}
+                    </span>
+                  </div>
+                  {st.limitBytes > 0 && (
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barCol(st.percent)}`} style={{ width: `${Math.min(100, Math.max(2, st.percent))}%` }} />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Allocated</div><div className="font-bold">{st.limitBytes ? fmt(st.limitBytes) : 'Unlimited'}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Used</div><div className="font-bold">{fmt(st.usedBytes)}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Remaining</div><div className="font-bold text-emerald-700">{st.remainingBytes == null ? 'Unlimited' : fmt(st.remainingBytes)}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Files</div><div className="font-bold">{st.fileCount || 0}</div></div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <ImageIcon className="w-4 h-4 text-emerald-600" /> Image Bandwidth
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                      {ib.limitBytes > 0 ? `${ib.percent}%` : 'Unlimited'}
+                    </span>
+                  </div>
+                  {ib.limitBytes > 0 && (
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barCol(ib.percent)}`} style={{ width: `${Math.min(100, Math.max(2, ib.percent))}%` }} />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Allocation</div><div className="font-bold">{ib.limitBytes ? fmt(ib.limitBytes) : 'Unlimited'}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Used / Rem</div><div className="font-bold">{fmt(ib.usedBytes)} / {ib.remainingBytes == null ? '∞' : fmt(ib.remainingBytes)}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Requests</div><div className="font-bold">{ib.requests || 0}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">HIT / MISS</div><div className="font-bold">{ib.cacheHit || 0} / {ib.cacheMiss || 0} ({ib.cacheHitRate || 0}%)</div></div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <Globe className="w-4 h-4 text-blue-600" /> General Traffic
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                      {gb.limitBytes > 0 ? `${gb.percent}%` : 'Unlimited'}
+                    </span>
+                  </div>
+                  {gb.limitBytes > 0 && (
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barCol(gb.percent)}`} style={{ width: `${Math.min(100, Math.max(2, gb.percent))}%` }} />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Allocation</div><div className="font-bold">{gb.limitBytes ? fmt(gb.limitBytes) : 'Unlimited'}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Used</div><div className="font-bold">{fmt(gb.usedBytes)}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Remaining</div><div className="font-bold text-emerald-700">{gb.remainingBytes == null ? 'Unlimited' : fmt(gb.remainingBytes)}</div></div>
+                    <div className="p-2 rounded-lg bg-slate-50"><div className="text-slate-400">Requests</div><div className="font-bold">{gb.requests || 0}</div></div>
+                  </div>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <div className="text-slate-400">General Traffic</div>
-                <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.generalBandwidth?.usedBytes)} /{" "}
-                  {selectedTenant.generalBandwidth?.limitBytes
-                    ? fmt(selectedTenant.generalBandwidth.limitBytes)
-                    : "Unlimited"}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div><div className="text-slate-400">Image Bandwidth</div><div className="font-bold text-slate-900">{fmt(cb.imageBytes)}</div></div>
+                <div><div className="text-slate-400">General Traffic</div><div className="font-bold text-slate-900">{fmt(cb.generalBytes)}</div></div>
+                <div><div className="text-purple-600">Combined Usage</div><div className="font-bold text-purple-900">{fmt(cb.usedBytes)}</div></div>
+                <div><div className="text-slate-400">Combined Remaining</div><div className="font-bold text-emerald-700">{cb.remainingBytes == null ? 'Unlimited' : fmt(cb.remainingBytes)}</div></div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 rounded-xl border border-slate-200 p-4">
+                  <div className="text-xs font-bold text-slate-800 mb-2">Daily Bandwidth Usage (MB)</div>
+                  {tDaily.length === 0 ? (
+                    <div className="h-44 flex items-center justify-center text-xs text-slate-400">No daily bandwidth data yet.</div>
+                  ) : (
+                    <div className="h-44">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={tDaily}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Area type="monotone" dataKey="imageMB" name="Image (MB)" stroke="#10b981" fill="#d1fae5" />
+                          <Area type="monotone" dataKey="generalMB" name="General (MB)" stroke="#3b82f6" fill="#dbeafe" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4 space-y-2">
+                  <div className="text-xs font-bold text-slate-800">Active &amp; Pending Add-ons</div>
+                  {tAddons.length === 0 ? (
+                    <div className="text-xs text-slate-400">No resource add-ons purchased.</div>
+                  ) : (
+                    tAddons.map((a) => (
+                      <div key={a.id} className="p-2 rounded-lg bg-slate-50 text-xs">
+                        <div className="font-semibold text-slate-800">{a.name} x{a.quantity} ({a.status})</div>
+                        <div className="text-slate-500">+{fmt(a.quantityBytes)}</div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <div className="text-slate-400">Cache HIT Rate</div>
-                <div className="font-bold text-slate-900 mt-0.5">
-                  {selectedTenant.imageBandwidth?.cacheHitRate || 0}%
+
+              {tHist.length > 0 && (
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <div className="text-xs font-bold text-slate-800 mb-2">Monthly Usage History</div>
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-slate-500 border-b border-slate-100">
+                      <tr><th className="py-1.5 pr-3">Period</th><th className="py-1.5 pr-3">Image</th><th className="py-1.5 pr-3">General</th><th className="py-1.5 pr-3">Combined</th><th className="py-1.5">Requests</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {tHist.map((h) => (
+                        <tr key={h.period}>
+                          <td className="py-1.5 pr-3 font-semibold">{h.period}</td>
+                          <td className="py-1.5 pr-3">{fmt(h.imageBytes)}</td>
+                          <td className="py-1.5 pr-3">{fmt(h.generalBytes)}</td>
+                          <td className="py-1.5 pr-3 font-bold">{fmt((h.imageBytes || 0) + (h.generalBytes || 0))}</td>
+                          <td className="py-1.5">{(h.imageRequests || 0) + (h.generalRequests || 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => reconcileTenant(selectedTenant.tenantId)}
-                className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold cursor-pointer"
-              >
-                Reconcile Storage from Inventory
-              </button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
