@@ -26,6 +26,7 @@ import {
   BookOpen,
   BarChart2,
   HardDrive,
+  RefreshCw,
   X,
 } from "lucide-react";
 
@@ -291,9 +292,6 @@ export default function Sidebar({ isOpen, onClose }) {
     {
       title: "Tenant Management",
       items: [
-        { name: "Analytics & Tracking", path: "/analytics", icon: BarChart2 },
-        { name: "Media & Storage", path: "/media-storage", icon: HardDrive },
-        { name: "Resource & Bandwidth", path: "/resource-analytics", icon: Activity },
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
         {
@@ -350,6 +348,15 @@ export default function Sidebar({ isOpen, onClose }) {
           path: "/blogs",
           icon: BookOpen,
         },
+      ],
+    },
+    {
+      title: "Analytics & Resources",
+      items: [
+        { name: "Analytics & Tracking", path: "/analytics", icon: BarChart2 },
+        { name: "Media & Storage", path: "/media-storage", icon: HardDrive },
+        { name: "Cloudinary → R2", path: "/media-migration", icon: RefreshCw },
+        { name: "Resource & Bandwidth", path: "/resource-analytics", icon: Activity },
       ],
     },
     {

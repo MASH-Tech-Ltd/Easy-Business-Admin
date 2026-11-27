@@ -33,6 +33,7 @@ const AffiliateDetails = lazy(() => import("./pages/AffiliateDetails"));
 const Blogs = lazy(() => import("./pages/Blogs"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const MediaStorage = lazy(() => import("./pages/MediaStorage"));
+const MediaMigration = lazy(() => import("./pages/MediaMigration"));
 const ResourceAnalytics = lazy(() => import("./pages/ResourceAnalytics"));
 
 function App() {
@@ -57,6 +58,7 @@ function App() {
             <Route index element={<Overview />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="media-storage" element={<MediaStorage />} />
+            <Route path="media-migration" element={<MediaMigration />} />
             <Route path="resource-analytics" element={<ResourceAnalytics />} />
             <Route path="packages" element={<Packages />} />
             <Route path="clients" element={<Clients />} />
