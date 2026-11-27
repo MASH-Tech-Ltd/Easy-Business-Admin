@@ -140,12 +140,12 @@ export default function ResourceAnalytics() {
     loadMerchants();
   }, [period, page, search]);
 
-  const inspectTenant = async (tenantId) => {
+  const inspectTenant = async (tenantId, storeName) => {
     try {
       const res = await api.get(
         `/resources/admin/tenants/${tenantId}/overview?period=${period}`,
       );
-      setSelectedTenant({ tenantId, ...res.data?.data });
+      setSelectedTenant({ tenantId, storeName, ...(res.data?.data || {}) });
     } catch {
       toast.error("Failed to load merchant resource details");
     }
@@ -338,7 +338,7 @@ export default function ResourceAnalytics() {
                     </div>
                   </div>
                   <button
-                    onClick={() => inspectTenant(m.tenantId)}
+                    onClick={() => inspectTenant(m.tenantId, m.name)}
                     className="text-blue-600 font-semibold inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" /> Inspect
@@ -502,7 +502,7 @@ export default function ResourceAnalytics() {
                     <td className="py-2.5 text-right">
                       <button
                         type="button"
-                        onClick={() => inspectTenant(m.tenantId)}
+                        onClick={() => inspectTenant(m.tenantId, m.name)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" /> Inspect
@@ -607,7 +607,14 @@ export default function ResourceAnalytics() {
             <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Merchant Resource Usage</h3>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Merchant Resource Usage
+                    {(selectedTenant.tenantName || selectedTenant.storeName) && (
+                      <span className="ml-2 text-sm font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                        {selectedTenant.tenantName || selectedTenant.storeName}
+                      </span>
+                    )}
+                  </h3>
                   <p className="text-xs text-slate-500">
                     Period <strong>{selectedTenant.period}</strong> &bull; Plan:{' '}
                     <strong>{selectedTenant.package?.name || 'Default'}</strong>

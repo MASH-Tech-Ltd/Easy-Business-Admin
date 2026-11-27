@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSocket } from '../context/SocketContext';
 import {
   Database as DbIcon,
   HardDrive,
@@ -27,8 +28,22 @@ import {
 } from '../store/apiSlice';
 
 export default function Database() {
+  const { socket } = useSocket();
   const [activeBackupTab, setActiveBackupTab] = useState('archives'); // 'archives' | 'logs'
   const [downloadingFile, setDownloadingFile] = useState(null);
+  const [syncProgress, setSyncProgress] = useState(null);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onProgress = (ev) => {
+      if (!ev) return;
+      setSyncProgress(ev);
+    };
+    socket.on('database_sync_progress', onProgress);
+    return () => {
+      socket.off('database_sync_progress', onProgress);
+    };
+  }, [socket]);
 
   const {
     data: dbStatsRes,
@@ -149,6 +164,22 @@ export default function Database() {
       </div>
 
       {/* Primary Production Cluster Overview Stats */}
+      {(isSyncing || syncProgress?.stage === 'counting' || syncProgress?.stage === 'replicating') && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-xs font-semibold text-amber-900">
+            <span>{syncProgress?.message || 'Replicating database collections...'}</span>
+            <span>
+              {syncProgress?.doneCollections || 0} / {syncProgress?.totalCollections || '?'} ({syncProgress?.percent || 0}%)
+            </span>
+          </div>
+          <div className="w-full h-2 bg-amber-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-amber-600 transition-all"
+              style={{ width: `${Math.min(100, syncProgress?.percent || 5)}%` }}
+            />
+          </div>
+        </div>
+      )}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
