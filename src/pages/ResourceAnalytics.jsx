@@ -41,26 +41,39 @@ const currentMonth = () => {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 };
 
+const analyticsCache = new Map();
+const merchantsListCache = new Map();
+let cachedPurchases = null;
+let cachedPackages = null;
+
 export default function ResourceAnalytics() {
   const [period, setPeriod] = useState(currentMonth());
   const [packageId, setPackageId] = useState("");
   const [addonCategory, setAddonCategory] = useState("");
-  const [packages, setPackages] = useState([]);
-  const [data, setData] = useState(null);
-  const [purchases, setPurchases] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initKey = `${currentMonth()}||`;
+  const [packages, setPackages] = useState(cachedPackages || []);
+  const [data, setData] = useState(analyticsCache.get(initKey) || null);
+  const [purchases, setPurchases] = useState(cachedPurchases || []);
+  const [loading, setLoading] = useState(!analyticsCache.has(initKey));
   const [selectedTenant, setSelectedTenant] = useState(null);
-  const [merchants, setMerchants] = useState([]);
-  const [merchantsMeta, setMerchantsMeta] = useState({
-    page: 1,
-    limit: 15,
-    total: 0,
-  });
+  const initMerchKey = `${currentMonth()}|1|`;
+  const initMerch = merchantsListCache.get(initMerchKey);
+  const [merchants, setMerchants] = useState(initMerch?.data || []);
+  const [merchantsMeta, setMerchantsMeta] = useState(
+    initMerch?.meta || { page: 1, limit: 15, total: 0 },
+  );
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
   const load = async () => {
-    setLoading(true);
+    const key = `${period}|${packageId}|${addonCategory}`;
+    const cached = analyticsCache.get(key);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams({ period });
       if (packageId) params.set("packageId", packageId);
@@ -70,13 +83,21 @@ export default function ResourceAnalytics() {
         api.get("/resources/admin/purchases?limit=20"),
         api.get("/resources/admin/packages"),
       ]);
-      setData(aRes.data?.data || null);
-      setPurchases(pRes.data?.data || []);
-      setPackages(pkgRes.data?.data || []);
+      const nextData = aRes.data?.data || null;
+      const nextPurchases = pRes.data?.data || [];
+      const nextPackages = pkgRes.data?.data || [];
+      if (nextData) analyticsCache.set(key, nextData);
+      cachedPurchases = nextPurchases;
+      cachedPackages = nextPackages;
+      setData(nextData);
+      setPurchases(nextPurchases);
+      setPackages(nextPackages);
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message || "Failed to load resource analytics",
-      );
+      if (!cached) {
+        toast.error(
+          err?.response?.data?.message || "Failed to load resource analytics",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -87,6 +108,12 @@ export default function ResourceAnalytics() {
   }, [period, packageId, addonCategory]);
 
   const loadMerchants = async () => {
+    const mKey = `${period}|${page}|${search.trim()}`;
+    const cachedM = merchantsListCache.get(mKey);
+    if (cachedM) {
+      setMerchants(cachedM.data);
+      setMerchantsMeta(cachedM.meta);
+    }
     try {
       const params = new URLSearchParams({
         period,
@@ -97,8 +124,13 @@ export default function ResourceAnalytics() {
       const res = await api.get(
         `/resources/admin/merchants?${params.toString()}`,
       );
-      setMerchants(res.data?.data || []);
-      setMerchantsMeta(res.data?.meta || { page: 1, limit: 15, total: 0 });
+      const nextM = {
+        data: res.data?.data || [],
+        meta: res.data?.meta || { page: 1, limit: 15, total: 0 },
+      };
+      merchantsListCache.set(mKey, nextM);
+      setMerchants(nextM.data);
+      setMerchantsMeta(nextM.meta);
     } catch {
       // silent
     }

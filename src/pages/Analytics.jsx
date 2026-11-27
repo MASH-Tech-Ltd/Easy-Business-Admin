@@ -66,14 +66,18 @@ const CustomChartTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const analyticsOverviewCache = new Map();
+const analyticsMerchantsCache = new Map();
+
 export default function Analytics() {
   const [selectedRange, setSelectedRange] = useState('30days');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [loadingOverview, setLoadingOverview] = useState(true);
+  const initOv = analyticsOverviewCache.get(JSON.stringify({ period: '30days' }));
+  const [loadingOverview, setLoadingOverview] = useState(!initOv);
 
   // Global Overview Stats
-  const [overview, setOverview] = useState({
+  const [overview, setOverview] = useState(initOv || {
     totalStoreVisits: 0,
     totalProductImpressions: 0,
     totalProductClicks: 0,
@@ -84,14 +88,16 @@ export default function Analytics() {
   });
 
   // Merchant-wise Table State
-  const [merchants, setMerchants] = useState([]);
-  const [merchantsLoading, setMerchantsLoading] = useState(true);
+  const initMerchKey = JSON.stringify({ period: '30days', page: 1, limit: 10, sortBy: 'impressions', sortOrder: 'desc' });
+  const initMerch = analyticsMerchantsCache.get(initMerchKey);
+  const [merchants, setMerchants] = useState(initMerch?.list || []);
+  const [merchantsLoading, setMerchantsLoading] = useState(!initMerch);
   const [merchantPage, setMerchantPage] = useState(1);
   const [merchantLimit, setMerchantLimit] = useState(10);
   const [merchantSearch, setMerchantSearch] = useState('');
   const [merchantSortBy, setMerchantSortBy] = useState('impressions');
   const [merchantSortOrder, setMerchantSortOrder] = useState('desc');
-  const [merchantPagination, setMerchantPagination] = useState({
+  const [merchantPagination, setMerchantPagination] = useState(initMerch?.pagination || {
     page: 1,
     limit: 10,
     total: 0,
@@ -119,18 +125,25 @@ export default function Analytics() {
   // Fetch Global Overview
   // ─────────────────────────────────────────────────────────────────────────────
   const fetchOverview = useCallback(async () => {
-    setLoadingOverview(true);
+    const params = { period: selectedRange };
+    if (selectedRange === 'custom' && startDate && endDate) {
+      params.startDate = startDate;
+      params.endDate = endDate;
+    }
+    const cacheKey = JSON.stringify(params);
+    const cached = analyticsOverviewCache.get(cacheKey);
+    if (cached) {
+      setOverview(cached);
+      setLoadingOverview(false);
+    } else {
+      setLoadingOverview(true);
+    }
     try {
-      const params = { period: selectedRange };
-      if (selectedRange === 'custom' && startDate && endDate) {
-        params.startDate = startDate;
-        params.endDate = endDate;
-      }
       const res = await api.get('/analytics/admin/overview', { params });
       if (res.data?.data) {
         const d = res.data.data;
         const metrics = d.overview || d;
-        setOverview({
+        const nextOv = {
           totalStoreVisits: metrics.totalStoreVisits ?? 0,
           totalProductImpressions: metrics.totalProductImpressions ?? 0,
           totalProductClicks: metrics.totalProductClicks ?? 0,
@@ -138,11 +151,13 @@ export default function Analytics() {
           totalProducts: metrics.totalProducts ?? 0,
           overallCtr: metrics.overallCtr ?? 0,
           timeline: Array.isArray(d.timeline) ? d.timeline : Array.isArray(d) ? d : [],
-        });
+        };
+        analyticsOverviewCache.set(cacheKey, nextOv);
+        setOverview(nextOv);
       }
     } catch (err) {
       console.error('Failed to fetch admin analytics overview:', err);
-      toast.error('Failed to load platform analytics overview');
+      if (!cached) toast.error('Failed to load platform analytics overview');
     } finally {
       setLoadingOverview(false);
     }
@@ -152,20 +167,28 @@ export default function Analytics() {
   // Fetch Merchant-wise Analytics Table
   // ─────────────────────────────────────────────────────────────────────────────
   const fetchMerchants = useCallback(async () => {
-    setMerchantsLoading(true);
+    const params = {
+      period: selectedRange,
+      page: merchantPage,
+      limit: merchantLimit,
+      sortBy: merchantSortBy,
+      sortOrder: merchantSortOrder,
+    };
+    if (merchantSearch) params.search = merchantSearch;
+    if (selectedRange === 'custom' && startDate && endDate) {
+      params.startDate = startDate;
+      params.endDate = endDate;
+    }
+    const cacheKey = JSON.stringify(params);
+    const cached = analyticsMerchantsCache.get(cacheKey);
+    if (cached) {
+      setMerchants(cached.list);
+      setMerchantPagination(cached.pagination);
+      setMerchantsLoading(false);
+    } else {
+      setMerchantsLoading(true);
+    }
     try {
-      const params = {
-        period: selectedRange,
-        page: merchantPage,
-        limit: merchantLimit,
-        sortBy: merchantSortBy,
-        sortOrder: merchantSortOrder,
-      };
-      if (merchantSearch) params.search = merchantSearch;
-      if (selectedRange === 'custom' && startDate && endDate) {
-        params.startDate = startDate;
-        params.endDate = endDate;
-      }
       const res = await api.get('/analytics/admin/merchants', { params });
       if (res.data) {
         const rawList = Array.isArray(res.data.data)
@@ -177,14 +200,16 @@ export default function Analytics() {
               : [];
         setMerchants(rawList);
         const metaObj = res.data.meta || res.data.data?.pagination || res.data.data?.meta;
-        if (metaObj) {
-          setMerchantPagination({
-            page: metaObj.page || 1,
-            limit: metaObj.limit || 10,
-            total: metaObj.total ?? rawList.length,
-            totalPages: metaObj.totalPages || 1,
-          });
-        }
+        const nextPag = metaObj
+          ? {
+              page: metaObj.page || 1,
+              limit: metaObj.limit || 10,
+              total: metaObj.total ?? rawList.length,
+              totalPages: metaObj.totalPages || 1,
+            }
+          : { page: 1, limit: 10, total: rawList.length, totalPages: 1 };
+        if (metaObj) setMerchantPagination(nextPag);
+        analyticsMerchantsCache.set(cacheKey, { list: rawList, pagination: nextPag });
       }
     } catch (err) {
       console.error('Failed to fetch merchants analytics:', err);

@@ -10,8 +10,10 @@ function formatBytes(bytes) {
   return `${value >= 10 || idx === 0 ? value.toFixed(0) : value.toFixed(2)} ${units[idx]}`;
 }
 
+let cachedPlatformMedia = null;
+
 export default function MediaUsageSection() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(cachedPlatformMedia);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -19,8 +21,9 @@ export default function MediaUsageSection() {
     api
       .get('/media/usage/platform')
       .then((res) => {
-        if (mounted && res.data?.data) {
-          setData(res.data.data);
+        if (res.data?.data) {
+          cachedPlatformMedia = res.data.data;
+          if (mounted) setData(res.data.data);
         }
       })
       .catch(() => {});
