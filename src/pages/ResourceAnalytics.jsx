@@ -1,10 +1,27 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import {
-  HardDrive, Image as ImageIcon, Globe, Activity, AlertTriangle, DollarSign, RefreshCw, Eye, X, Search
-} from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import api from '../utils/api';
+  HardDrive,
+  Image as ImageIcon,
+  Globe,
+  Activity,
+  AlertTriangle,
+  DollarSign,
+  RefreshCw,
+  Eye,
+  X,
+  Search,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
+import api from "../utils/api";
 
 const KB = 1024;
 const MB = 1024 * KB;
@@ -12,7 +29,7 @@ const GB = 1024 * MB;
 
 const fmt = (bytes) => {
   const b = Number(bytes || 0);
-  if (b <= 0) return '0 B';
+  if (b <= 0) return "0 B";
   if (b >= GB) return `${(b / GB).toFixed(2)} GB`;
   if (b >= MB) return `${(b / MB).toFixed(2)} MB`;
   if (b >= KB) return `${(b / KB).toFixed(2)} KB`;
@@ -21,39 +38,45 @@ const fmt = (bytes) => {
 
 const currentMonth = () => {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 };
 
 export default function ResourceAnalytics() {
   const [period, setPeriod] = useState(currentMonth());
-  const [packageId, setPackageId] = useState('');
-  const [addonCategory, setAddonCategory] = useState('');
+  const [packageId, setPackageId] = useState("");
+  const [addonCategory, setAddonCategory] = useState("");
   const [packages, setPackages] = useState([]);
   const [data, setData] = useState(null);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [merchants, setMerchants] = useState([]);
-  const [merchantsMeta, setMerchantsMeta] = useState({ page: 1, limit: 15, total: 0 });
-  const [search, setSearch] = useState('');
+  const [merchantsMeta, setMerchantsMeta] = useState({
+    page: 1,
+    limit: 15,
+    total: 0,
+  });
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
   const load = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ period });
-      if (packageId) params.set('packageId', packageId);
-      if (addonCategory) params.set('addonCategory', addonCategory);
+      if (packageId) params.set("packageId", packageId);
+      if (addonCategory) params.set("addonCategory", addonCategory);
       const [aRes, pRes, pkgRes] = await Promise.all([
         api.get(`/resources/admin/analytics?${params.toString()}`),
-        api.get('/resources/admin/purchases?limit=20'),
-        api.get('/resources/admin/packages'),
+        api.get("/resources/admin/purchases?limit=20"),
+        api.get("/resources/admin/packages"),
       ]);
       setData(aRes.data?.data || null);
       setPurchases(pRes.data?.data || []);
       setPackages(pkgRes.data?.data || []);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to load resource analytics');
+      toast.error(
+        err?.response?.data?.message || "Failed to load resource analytics",
+      );
     } finally {
       setLoading(false);
     }
@@ -65,9 +88,15 @@ export default function ResourceAnalytics() {
 
   const loadMerchants = async () => {
     try {
-      const params = new URLSearchParams({ period, page: String(page), limit: '15' });
-      if (search.trim()) params.set('search', search.trim());
-      const res = await api.get(`/resources/admin/merchants?${params.toString()}`);
+      const params = new URLSearchParams({
+        period,
+        page: String(page),
+        limit: "15",
+      });
+      if (search.trim()) params.set("search", search.trim());
+      const res = await api.get(
+        `/resources/admin/merchants?${params.toString()}`,
+      );
       setMerchants(res.data?.data || []);
       setMerchantsMeta(res.data?.meta || { page: 1, limit: 15, total: 0 });
     } catch {
@@ -81,21 +110,27 @@ export default function ResourceAnalytics() {
 
   const inspectTenant = async (tenantId) => {
     try {
-      const res = await api.get(`/resources/admin/tenants/${tenantId}/overview?period=${period}`);
+      const res = await api.get(
+        `/resources/admin/tenants/${tenantId}/overview?period=${period}`,
+      );
       setSelectedTenant({ tenantId, ...res.data?.data });
     } catch {
-      toast.error('Failed to load merchant resource details');
+      toast.error("Failed to load merchant resource details");
     }
   };
 
   const reconcileTenant = async (tenantId) => {
     try {
-      const res = await api.post(`/resources/admin/tenants/${tenantId}/reconcile-storage`);
+      const res = await api.post(
+        `/resources/admin/tenants/${tenantId}/reconcile-storage`,
+      );
       const d = res.data?.data;
-      toast.success(`Reconciled: ${fmt(d.after)} across ${d.files} files (drift ${fmt(d.driftBytes)})`);
+      toast.success(
+        `Reconciled: ${fmt(d.after)} across ${d.files} files (drift ${fmt(d.driftBytes)})`,
+      );
       inspectTenant(tenantId);
     } catch {
-      toast.error('Reconciliation failed');
+      toast.error("Reconciliation failed");
     }
   };
 
@@ -111,9 +146,12 @@ export default function ResourceAnalytics() {
       {/* Header & Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Resource &amp; Bandwidth Analytics</h1>
+          <h1 className="text-xl font-bold text-slate-900">
+            Resource &amp; Bandwidth Analytics
+          </h1>
           <p className="text-xs text-slate-500">
-            Platform storage, Cloudflare image &amp; general traffic, quota risks, and add-on revenue.
+            Platform storage, Cloudflare image &amp; general traffic, quota
+            risks, and add-on revenue.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -130,7 +168,9 @@ export default function ResourceAnalytics() {
           >
             <option value="">All Packages</option>
             {packages.map((p) => (
-              <option key={p._id} value={p._id}>{p.name} ({p.billingCycle})</option>
+              <option key={p._id} value={p._id}>
+                {p.name} ({p.billingCycle})
+              </option>
             ))}
           </select>
           <select
@@ -147,7 +187,10 @@ export default function ResourceAnalytics() {
             onClick={load}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+            />{" "}
+            Refresh
           </button>
         </div>
       </div>
@@ -156,41 +199,63 @@ export default function ResourceAnalytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-            <HardDrive className="w-4 h-4 text-indigo-600" /> Platform Image Storage
+            <HardDrive className="w-4 h-4 text-indigo-600" /> Platform Image
+            Storage
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{fmt(totals.storageBytes)}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{totals.storageFiles || 0} tracked files</div>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-            <ImageIcon className="w-4 h-4 text-emerald-600" /> Image Delivery Bandwidth
+          <div className="text-2xl font-bold text-slate-900 mt-1">
+            {fmt(totals.storageBytes)}
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{fmt(totals.imageBytes)}</div>
           <div className="text-xs text-slate-400 mt-0.5">
-            {totals.imageRequests || 0} req • HIT {totals.cacheHit || 0} / MISS {totals.cacheMiss || 0}
+            {totals.storageFiles || 0} tracked files
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-            <Globe className="w-4 h-4 text-blue-600" /> General Traffic Bandwidth
+            <ImageIcon className="w-4 h-4 text-emerald-600" /> Image Delivery
+            Bandwidth
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{fmt(totals.generalBytes)}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{totals.generalRequests || 0} requests</div>
+          <div className="text-2xl font-bold text-slate-900 mt-1">
+            {fmt(totals.imageBytes)}
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            {totals.imageRequests || 0} req • HIT {totals.cacheHit || 0} / MISS{" "}
+            {totals.cacheMiss || 0}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+            <Globe className="w-4 h-4 text-blue-600" /> General Traffic
+            Bandwidth
+          </div>
+          <div className="text-2xl font-bold text-slate-900 mt-1">
+            {fmt(totals.generalBytes)}
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            {totals.generalRequests || 0} requests
+          </div>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
             <Activity className="w-4 h-4 text-purple-600" /> Combined Bandwidth
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{fmt(totals.combinedBytes)}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{totals.merchantsWithUsage || 0} active stores</div>
+          <div className="text-2xl font-bold text-slate-900 mt-1">
+            {fmt(totals.combinedBytes)}
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            {totals.merchantsWithUsage || 0} active stores
+          </div>
         </div>
       </div>
 
       {/* Daily Trend Chart */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h2 className="text-sm font-bold text-slate-800 mb-3">Daily Bandwidth Trend (MB) — {period}</h2>
+        <h2 className="text-sm font-bold text-slate-800 mb-3">
+          Daily Bandwidth Trend (MB) — {period}
+        </h2>
         {chartData.length === 0 ? (
-          <div className="h-52 flex items-center justify-center text-xs text-slate-400">No bandwidth data recorded for this period yet.</div>
+          <div className="h-52 flex items-center justify-center text-xs text-slate-400">
+            No bandwidth data recorded for this period yet.
+          </div>
         ) : (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -199,8 +264,20 @@ export default function ResourceAnalytics() {
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="imageMB" name="Image (MB)" stroke="#10b981" fill="#d1fae5" />
-                <Area type="monotone" dataKey="generalMB" name="General (MB)" stroke="#3b82f6" fill="#dbeafe" />
+                <Area
+                  type="monotone"
+                  dataKey="imageMB"
+                  name="Image (MB)"
+                  stroke="#10b981"
+                  fill="#d1fae5"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="generalMB"
+                  name="General (MB)"
+                  stroke="#3b82f6"
+                  fill="#dbeafe"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -210,18 +287,28 @@ export default function ResourceAnalytics() {
       {/* Top Consumers + Limit Risks + Add-on Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-          <h3 className="text-sm font-bold text-slate-800">Top Resource-Consuming Merchants</h3>
+          <h3 className="text-sm font-bold text-slate-800">
+            Top Resource-Consuming Merchants
+          </h3>
           {(data?.topMerchants || []).length === 0 ? (
             <p className="text-xs text-slate-400">No usage yet.</p>
           ) : (
             <div className="space-y-2">
               {data.topMerchants.map((m) => (
-                <div key={m.tenantId} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50">
+                <div
+                  key={m.tenantId}
+                  className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50"
+                >
                   <div>
                     <div className="font-semibold text-slate-800">{m.name}</div>
-                    <div className="text-slate-400">Img {fmt(m.imageBytes)} • Gen {fmt(m.generalBytes)}</div>
+                    <div className="text-slate-400">
+                      Img {fmt(m.imageBytes)} • Gen {fmt(m.generalBytes)}
+                    </div>
                   </div>
-                  <button onClick={() => inspectTenant(m.tenantId)} className="text-blue-600 font-semibold inline-flex items-center gap-1 cursor-pointer">
+                  <button
+                    onClick={() => inspectTenant(m.tenantId)}
+                    className="text-blue-600 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
                     <Eye className="w-3.5 h-3.5" /> Inspect
                   </button>
                 </div>
@@ -232,38 +319,67 @@ export default function ResourceAnalytics() {
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-            <AlertTriangle className="w-4 h-4 text-amber-500" /> Approaching / Exceeding Limits
+            <AlertTriangle className="w-4 h-4 text-amber-500" /> Approaching /
+            Exceeding Limits
           </h3>
-          {[...(data?.exceedingLimit || []).map((x) => ({ ...x, over: true })), ...(data?.approachingLimit || [])].slice(0, 12).map((r, i) => (
-            <div key={i} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50">
-              <div>
-                <div className="font-semibold text-slate-800">{r.name}</div>
-                <div className="text-slate-400 capitalize">{r.resource.replace('_', ' ')}</div>
+          {[
+            ...(data?.exceedingLimit || []).map((x) => ({ ...x, over: true })),
+            ...(data?.approachingLimit || []),
+          ]
+            .slice(0, 12)
+            .map((r, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50"
+              >
+                <div>
+                  <div className="font-semibold text-slate-800">{r.name}</div>
+                  <div className="text-slate-400 capitalize">
+                    {r.resource.replace("_", " ")}
+                  </div>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full font-bold ${r.over ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}
+                >
+                  {r.percent}%
+                </span>
               </div>
-              <span className={`px-2 py-0.5 rounded-full font-bold ${r.over ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                {r.percent}%
-              </span>
-            </div>
-          ))}
-          {!(data?.exceedingLimit?.length || data?.approachingLimit?.length) && (
-            <p className="text-xs text-slate-400">No merchants near or over limit.</p>
+            ))}
+          {!(
+            data?.exceedingLimit?.length || data?.approachingLimit?.length
+          ) && (
+            <p className="text-xs text-slate-400">
+              No merchants near or over limit.
+            </p>
           )}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-            <DollarSign className="w-4 h-4 text-emerald-600" /> Add-on Revenue by Category
+            <DollarSign className="w-4 h-4 text-emerald-600" /> Add-on Revenue
+            by Category
           </h3>
           {(data?.addonSales || []).length === 0 ? (
-            <p className="text-xs text-slate-400">No activated add-on sales yet.</p>
+            <p className="text-xs text-slate-400">
+              No activated add-on sales yet.
+            </p>
           ) : (
             data.addonSales.map((s) => (
-              <div key={s.category} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50">
+              <div
+                key={s.category}
+                className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50"
+              >
                 <div>
-                  <div className="font-semibold text-slate-800 capitalize">{String(s.category).replace('_', ' ')}</div>
-                  <div className="text-slate-400">{s.purchases} purchase(s)</div>
+                  <div className="font-semibold text-slate-800 capitalize">
+                    {String(s.category).replace("_", " ")}
+                  </div>
+                  <div className="text-slate-400">
+                    {s.purchases} purchase(s)
+                  </div>
                 </div>
-                <div className="font-bold text-emerald-700 text-sm">৳{s.revenue}</div>
+                <div className="font-bold text-emerald-700 text-sm">
+                  ৳{s.revenue}
+                </div>
               </div>
             ))
           )}
@@ -274,8 +390,12 @@ export default function ResourceAnalytics() {
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-slate-800">All Merchants Resource &amp; Bandwidth Usage</h3>
-            <p className="text-xs text-slate-500">Total stores: {merchantsMeta.total || 0}</p>
+            <h3 className="text-sm font-bold text-slate-800">
+              All Merchants Resource &amp; Bandwidth Usage
+            </h3>
+            <p className="text-xs text-slate-500">
+              Total stores: {merchantsMeta.total || 0}
+            </p>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -316,22 +436,37 @@ export default function ResourceAnalytics() {
                 merchants.map((m) => (
                   <tr key={m.tenantId}>
                     <td className="py-2.5 pr-3">
-                      <div className="font-semibold text-slate-800">{m.name}</div>
-                      <div className="text-[11px] text-slate-400">{m.customDomain || `${m.slug}.masheco.com`}</div>
+                      <div className="font-semibold text-slate-800">
+                        {m.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {m.customDomain || `${m.slug}.masheco.com`}
+                      </div>
                     </td>
                     <td className="py-2.5 pr-3">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">{m.packageName}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                        {m.packageName}
+                      </span>
                     </td>
                     <td className="py-2.5 pr-3">
-                      {fmt(m.storageBytes)} <span className="text-slate-400">({m.fileCount})</span>
+                      {fmt(m.storageBytes)}{" "}
+                      <span className="text-slate-400">({m.fileCount})</span>
                     </td>
                     <td className="py-2.5 pr-3">
-                      {fmt(m.imageBytes)} <span className="text-slate-400">({m.imageRequests} req)</span>
+                      {fmt(m.imageBytes)}{" "}
+                      <span className="text-slate-400">
+                        ({m.imageRequests} req)
+                      </span>
                     </td>
                     <td className="py-2.5 pr-3">
-                      {fmt(m.generalBytes)} <span className="text-slate-400">({m.generalRequests} req)</span>
+                      {fmt(m.generalBytes)}{" "}
+                      <span className="text-slate-400">
+                        ({m.generalRequests} req)
+                      </span>
                     </td>
-                    <td className="py-2.5 pr-3 font-bold text-slate-900">{fmt(m.combinedBytes)}</td>
+                    <td className="py-2.5 pr-3 font-bold text-slate-900">
+                      {fmt(m.combinedBytes)}
+                    </td>
                     <td className="py-2.5 text-right">
                       <button
                         type="button"
@@ -351,7 +486,8 @@ export default function ResourceAnalytics() {
         {merchantsMeta.total > merchantsMeta.limit && (
           <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
             <span className="text-slate-500">
-              Page {merchantsMeta.page} of {Math.ceil(merchantsMeta.total / merchantsMeta.limit)}
+              Page {merchantsMeta.page} of{" "}
+              {Math.ceil(merchantsMeta.total / merchantsMeta.limit)}
             </span>
             <div className="flex gap-2">
               <button
@@ -364,7 +500,9 @@ export default function ResourceAnalytics() {
               </button>
               <button
                 type="button"
-                disabled={page >= Math.ceil(merchantsMeta.total / merchantsMeta.limit)}
+                disabled={
+                  page >= Math.ceil(merchantsMeta.total / merchantsMeta.limit)
+                }
                 onClick={() => setPage((p) => p + 1)}
                 className="px-3 py-1 rounded-lg bg-slate-100 disabled:opacity-40 font-semibold cursor-pointer"
               >
@@ -377,7 +515,9 @@ export default function ResourceAnalytics() {
 
       {/* Recent Purchases */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
-        <h3 className="text-sm font-bold text-slate-800 mb-3">Recent Resource Add-on Purchases</h3>
+        <h3 className="text-sm font-bold text-slate-800 mb-3">
+          Recent Resource Add-on Purchases
+        </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="text-slate-500 border-b border-slate-100">
@@ -393,12 +533,22 @@ export default function ResourceAnalytics() {
             <tbody className="divide-y divide-slate-100">
               {purchases.map((p) => (
                 <tr key={p._id}>
-                  <td className="py-2 pr-3 font-semibold">{p.tenantId?.name || String(p.tenantId)}</td>
-                  <td className="py-2 pr-3">{p.snapshot?.name} x{p.quantity}</td>
-                  <td className="py-2 pr-3 capitalize">{String(p.category).replace('_', ' ')}</td>
+                  <td className="py-2 pr-3 font-semibold">
+                    {p.tenantId?.name || String(p.tenantId)}
+                  </td>
+                  <td className="py-2 pr-3">
+                    {p.snapshot?.name} x{p.quantity}
+                  </td>
+                  <td className="py-2 pr-3 capitalize">
+                    {String(p.category).replace("_", " ")}
+                  </td>
                   <td className="py-2 pr-3 font-bold">৳{p.totalPrice}</td>
                   <td className="py-2 pr-3 capitalize">{p.status}</td>
-                  <td className="py-2">{p.expiresAt ? new Date(p.expiresAt).toLocaleDateString() : 'Permanent'}</td>
+                  <td className="py-2">
+                    {p.expiresAt
+                      ? new Date(p.expiresAt).toLocaleDateString()
+                      : "Permanent"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -411,8 +561,13 @@ export default function ResourceAnalytics() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-800">Merchant Resource Breakdown</h3>
-              <button onClick={() => setSelectedTenant(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <h3 className="text-base font-bold text-slate-800">
+                Merchant Resource Breakdown
+              </h3>
+              <button
+                onClick={() => setSelectedTenant(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -420,24 +575,35 @@ export default function ResourceAnalytics() {
               <div className="p-3 rounded-xl bg-slate-50">
                 <div className="text-slate-400">Storage Used / Limit</div>
                 <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.storage?.usedBytes)} / {selectedTenant.storage?.limitBytes ? fmt(selectedTenant.storage.limitBytes) : 'Unlimited'}
+                  {fmt(selectedTenant.storage?.usedBytes)} /{" "}
+                  {selectedTenant.storage?.limitBytes
+                    ? fmt(selectedTenant.storage.limitBytes)
+                    : "Unlimited"}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50">
                 <div className="text-slate-400">Image Bandwidth</div>
                 <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.imageBandwidth?.usedBytes)} / {selectedTenant.imageBandwidth?.limitBytes ? fmt(selectedTenant.imageBandwidth.limitBytes) : 'Unlimited'}
+                  {fmt(selectedTenant.imageBandwidth?.usedBytes)} /{" "}
+                  {selectedTenant.imageBandwidth?.limitBytes
+                    ? fmt(selectedTenant.imageBandwidth.limitBytes)
+                    : "Unlimited"}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50">
                 <div className="text-slate-400">General Traffic</div>
                 <div className="font-bold text-slate-900 mt-0.5">
-                  {fmt(selectedTenant.generalBandwidth?.usedBytes)} / {selectedTenant.generalBandwidth?.limitBytes ? fmt(selectedTenant.generalBandwidth.limitBytes) : 'Unlimited'}
+                  {fmt(selectedTenant.generalBandwidth?.usedBytes)} /{" "}
+                  {selectedTenant.generalBandwidth?.limitBytes
+                    ? fmt(selectedTenant.generalBandwidth.limitBytes)
+                    : "Unlimited"}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50">
                 <div className="text-slate-400">Cache HIT Rate</div>
-                <div className="font-bold text-slate-900 mt-0.5">{selectedTenant.imageBandwidth?.cacheHitRate || 0}%</div>
+                <div className="font-bold text-slate-900 mt-0.5">
+                  {selectedTenant.imageBandwidth?.cacheHitRate || 0}%
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-2">
