@@ -293,6 +293,7 @@ export default function Sidebar({ isOpen, onClose }) {
       items: [
         { name: "Analytics & Tracking", path: "/analytics", icon: BarChart2 },
         { name: "Media & Storage", path: "/media-storage", icon: HardDrive },
+        { name: "Resource & Bandwidth", path: "/resource-analytics", icon: Activity },
         { name: "Clients (Shops)", path: "/clients", icon: Users },
         { name: "Merchants (Users)", path: "/users", icon: Users },
         {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen, Video, Play } from 'lucide-react';
+import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen, Video, Play, HardDrive } from 'lucide-react';
+import ResourceSettingsTab from '../components/ResourceSettingsTab';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { MFSLogo } from '../components/MFSLogo';
@@ -461,6 +462,10 @@ export default function GlobalSettings() {
   }, [activeTab]);
 
   const handleSave = async () => {
+    if (activeTab === 'resource') {
+      toast.info('Use the "Save Resource Settings" button inside Resource & Bandwidth Management.');
+      return;
+    }
     setIsSaving(true);
     const toastId = toast.loading('Saving settings...');
     try {
@@ -857,6 +862,15 @@ export default function GlobalSettings() {
           >
             <Video className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'videos' ? 'text-blue-600' : 'text-slate-400'}`} />
             Demonstration Videos
+          </button>
+          <button 
+            onClick={() => setActiveTab('resource')}
+            className={`flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap lg:whitespace-normal shrink-0 lg:w-full cursor-pointer ${
+              activeTab === 'resource' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <HardDrive className={`w-4 h-4 sm:w-5 sm:h-5 ${activeTab === 'resource' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Resource & Bandwidth Management
           </button>
         </div>
 
@@ -2924,6 +2938,8 @@ export default function GlobalSettings() {
               </div>
             </div>
           )}
+
+          {activeTab === 'resource' && <ResourceSettingsTab />}
         </div>
       </div>
 
