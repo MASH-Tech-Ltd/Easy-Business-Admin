@@ -4,6 +4,7 @@ import {
   Cloud, ArrowRight, RefreshCw, Trash2, CheckCircle2, Clock, AlertTriangle, Search, Image as ImageIcon
 } from 'lucide-react';
 import api from '../utils/api';
+import { useSocket } from '../context/SocketContext';
 
 const KINDS = [
   { key: 'product', label: 'Product Images' },
@@ -41,7 +42,10 @@ export default function MediaMigration() {
   const [history, setHistory] = useState([]);
   const [selectedKinds, setSelectedKinds] = useState(['product', 'category', 'banner', 'logo', 'avatar']);
   const [scanning, setScanning] = useState(false);
+  const { socket } = useSocket();
   const [migrating, setMigrating] = useState(false);
+  const [progress, setProgress] = useState(null);
+  const [liveStats, setLiveStats] = useState({ migrated: 0, failed: 0, lastEvent: '' });
   const [cleaning, setCleaning] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
@@ -107,23 +111,59 @@ export default function MediaMigration() {
     setSelectedKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
   };
 
+  useEffect(() => {
+    if (!socket || !selectedId) return;
+    const onProgress = (ev) => {
+      if (!ev || ev.tenantId !== selectedId) return;
+      setLiveStats((prev) => ({
+        migrated: prev.migrated + (ev.status === 'migrated' ? 1 : 0),
+        failed: prev.failed + (ev.status === 'failed' ? 1 : 0),
+        lastEvent: ev.status === 'migrated' ? `Migrated ${ev.kind} image` : `Failed (${ev.kind}): ${ev.error || 'error'}`,
+      }));
+    };
+    socket.on('media_migration_progress', onProgress);
+    return () => {
+      socket.off('media_migration_progress', onProgress);
+    };
+  }, [socket, selectedId]);
+
   const handleMigrate = async () => {
     if (!selectedId) return toast.warning('Select a store first');
     if (!selectedKinds.length) return toast.warning('Select at least one image category');
-    if (!window.confirm(`Migrate selected Cloudinary images for "${scan?.tenant?.name}" to Cloudflare R2? (Cloudinary files will NOT be deleted now — they stay backed up for 3 days.)`)) {
+    const targetTotal = selectedKinds.reduce((s, k) => s + (scan?.counts?.[k] || 0), 0);
+    if (!targetTotal) return toast.info('No Cloudinary images left in selected categories');
+    if (!window.confirm(`Migrate ${targetTotal} Cloudinary image(s) for "${scan?.tenant?.name}" in chunks of 10? (Cloudinary files will NOT be deleted — kept for 3 days.)`)) {
       return;
     }
     setMigrating(true);
+    setLiveStats({ migrated: 0, failed: 0, lastEvent: 'Starting migration...' });
+    setProgress({ done: 0, total: targetTotal, chunk: 0 });
+    const agg = { migrated: 0, failed: 0, byKind: { product: 0, category: 0, banner: 0, logo: 0, avatar: 0 }, errors: [] };
     try {
-      const res = await api.post(`/media/migration/run/${selectedId}`, { kinds: selectedKinds });
-      const d = res.data?.data;
-      setLastResult(d);
-      toast.success(`Migrated ${d?.migrated || 0} image(s) to R2${d?.failed ? ` (${d.failed} failed)` : ''}`);
+      let remaining = targetTotal;
+      let chunk = 0;
+      while (remaining > 0) {
+        chunk++;
+        const res = await api.post(`/media/migration/run/${selectedId}`, { kinds: selectedKinds, limit: 10 });
+        const d = res.data?.data;
+        if (!d) break;
+        agg.migrated += d.migrated || 0;
+        agg.failed += d.failed || 0;
+        for (const k of Object.keys(agg.byKind)) agg.byKind[k] += d.byKind?.[k] || 0;
+        if (Array.isArray(d.errors) && d.errors.length) agg.errors.push(...d.errors);
+        remaining = d.remaining ?? 0;
+        setProgress({ done: Math.min(targetTotal, agg.migrated + agg.failed), total: targetTotal, chunk });
+        setLastResult({ ...agg });
+        if ((d.processed || 0) === 0 || (d.migrated === 0 && d.failed > 0 && remaining === targetTotal)) break;
+      }
+      toast.success(`Migrated ${agg.migrated} image(s) to R2${agg.failed ? ` (${agg.failed} failed)` : ''}`);
       await loadScanAndHistory(selectedId);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Migration failed');
+      toast.error(err?.response?.data?.message || 'Migration failed mid-batch (already migrated images are saved!)');
+      await loadScanAndHistory(selectedId);
     } finally {
       setMigrating(false);
+      setProgress(null);
     }
   };
 
@@ -321,6 +361,25 @@ export default function MediaMigration() {
                 })}
               </div>
 
+              {migrating && progress && (
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-semibold text-blue-900">
+                    <span>Live Progress (Batch {progress.chunk})</span>
+                    <span>
+                      Migrated: <strong className="text-emerald-700">{liveStats.migrated}</strong> &bull; Failed:{' '}
+                      <strong className="text-red-600">{liveStats.failed}</strong> / {progress.total}
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-blue-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 transition-all"
+                      style={{ width: `${Math.min(100, Math.round(((liveStats.migrated + liveStats.failed) / Math.max(1, progress.total)) * 100))}%` }}
+                    />
+                  </div>
+                  {liveStats.lastEvent && <div className="text-[11px] text-blue-800 truncate">{liveStats.lastEvent}</div>}
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 <span className="text-xs text-slate-500">
                   Cloudinary originals are preserved for 3 days for safe rollback.
@@ -332,7 +391,7 @@ export default function MediaMigration() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer"
                 >
                   {migrating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                  {migrating ? 'Migrating...' : 'Migrate Selected to R2'}
+                  {migrating && progress ? `Migrating ${progress.done}/${progress.total} (Batch ${progress.chunk})...` : 'Migrate Selected to R2 (10/batch)'}
                 </button>
               </div>
             </div>
