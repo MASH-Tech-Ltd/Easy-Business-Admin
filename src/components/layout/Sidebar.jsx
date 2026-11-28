@@ -369,6 +369,7 @@ export default function Sidebar({ isOpen, onClose }) {
         { name: "Notifications", path: "/notifications", icon: Bell },
         { name: "Database", path: "/database", icon: Database },
         { name: "System Health", path: "/health", icon: Activity },
+        { name: "Redis & Cache", path: "/redis-monitoring", icon: Server, badge: "NEW" },
         { name: "Security & IPs", path: "/security", icon: ShieldCheck },
       ],
     },

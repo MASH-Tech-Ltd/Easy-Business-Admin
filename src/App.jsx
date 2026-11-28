@@ -35,6 +35,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const MediaStorage = lazy(() => import("./pages/MediaStorage"));
 const MediaMigration = lazy(() => import("./pages/MediaMigration"));
 const ResourceAnalytics = lazy(() => import("./pages/ResourceAnalytics"));
+const RedisMonitoring = lazy(() => import("./pages/RedisMonitoring"));
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
             <Route path="affiliates" element={<Affiliates />} />
             <Route path="affiliates/:id" element={<AffiliateDetails />} />
             <Route path="health" element={<Health />} />
+            <Route path="redis-monitoring" element={<RedisMonitoring />} />
             <Route path="billing" element={<Billing />} />
             <Route path="addon-requests" element={<AddonRequests />} />
             <Route path="payment-verifications" element={<PaymentVerifications />} />
