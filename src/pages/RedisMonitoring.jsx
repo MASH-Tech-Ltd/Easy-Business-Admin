@@ -25,6 +25,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
 
 const REFRESH_OPTIONS = [
@@ -176,20 +177,20 @@ export default function RedisMonitoring() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Server className="w-6 h-6 text-blue-600" />
-            Redis &amp; Cache Monitoring
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Server className="w-6 h-6 text-blue-600 shrink-0" />
+            <span className="truncate">Redis &amp; Cache Monitoring</span>
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Centralized caching, memory budget (128 MB), API latency &amp; cache invalidation controls
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {/* Status Pill */}
           <span
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
@@ -345,21 +346,52 @@ export default function RedisMonitoring() {
 
           {/* Memory Bar */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
                 <h3 className="text-base font-semibold text-slate-900">Memory Budget Utilization</h3>
                 <p className="text-xs text-slate-500">
                   Eviction Policy: <span className="font-mono font-medium">{redis?.memory?.evictionPolicy || "allkeys-lru"}</span> &bull; Total Commands:{" "}
                   {(redis?.totalCommandsProcessed ?? 0).toLocaleString()}
                 </p>
               </div>
-              <span className="text-lg font-bold text-slate-900">{memPercent}%</span>
+              <span className="text-lg font-bold text-slate-900 shrink-0">{memPercent}%</span>
             </div>
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={`h-full ${memBarColor} transition-all duration-300`}
                 style={{ width: `${Math.min(100, memPercent)}%` }}
               />
+            </div>
+          </div>
+
+          {/* Quick Live Cache Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-xl border border-slate-200">
+              <p className="text-xs font-medium text-slate-500">LIVE CACHE HIT RATE</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1.5">
+                {totals.hitRatePercent ?? 0}%
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {(totals.hits ?? 0).toLocaleString()} hits / {(totals.misses ?? 0).toLocaleString()} misses
+              </p>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200">
+              <p className="text-xs font-medium text-slate-500">REDIS KEYSPACE HIT RATE</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1.5">
+                {redis?.stats?.hitRatePercent ?? 0}%
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Evicted: {(redis?.stats?.evictedKeys ?? 0).toLocaleString()} &bull; Expired: {(redis?.stats?.expiredKeys ?? 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200">
+              <p className="text-xs font-medium text-slate-500">MONITORED API ENDPOINTS</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1.5">
+                {endpoints.length}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Slow endpoints (&ge;{apiPerf?.slowThresholdMs || 300}ms): {slowEndpoints.length}
+              </p>
             </div>
           </div>
         </div>
@@ -408,16 +440,57 @@ export default function RedisMonitoring() {
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Hits vs Misses by Cache Group</h3>
-            <div className="h-72">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Hits vs Misses by Cache Group</h3>
+                <p className="text-xs text-slate-500">
+                  Both high-volume and low-volume cache groups remain visible with subtle hover highlight
+                </p>
+              </div>
+            </div>
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={groups.map((g) => ({ ...g, name: formatGroupLabel(g.group) }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="hits" name="Cache Hits" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="misses" name="Cache Misses" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <BarChart
+                  data={groups.map((g) => ({ ...g, name: formatGroupLabel(g.group) }))}
+                  margin={{ top: 10, right: 16, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    interval={0}
+                    tick={{ fontSize: 11, fill: "#475569" }}
+                    angle={-15}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
+                  <Tooltip
+                    cursor={{ fill: "rgba(59, 130, 246, 0.06)" }}
+                    contentStyle={{
+                      backgroundColor: "rgba(255, 255, 255, 0.96)",
+                      borderColor: "#e2e8f0",
+                      borderRadius: "10px",
+                      boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.08)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
+                  <Bar
+                    dataKey="hits"
+                    name="Cache Hits"
+                    fill="#10b981"
+                    fillOpacity={0.9}
+                    minPointSize={3}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="misses"
+                    name="Cache Misses"
+                    fill="#f59e0b"
+                    fillOpacity={0.88}
+                    minPointSize={3}
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
