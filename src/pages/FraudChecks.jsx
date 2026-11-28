@@ -3,19 +3,22 @@ import { ShieldCheck, ShieldAlert, Shield, Search, RefreshCw, X, MoreVertical } 
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 
+let fraudChecksCache = null;
+
 export default function FraudChecks() {
-  const [checks, setChecks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [checks, setChecks] = useState(fraudChecksCache || []);
+  const [loading, setLoading] = useState(!fraudChecksCache);
 
   const fetchChecks = async () => {
-    setLoading(true);
+    if (!fraudChecksCache) setLoading(true);
     try {
       const res = await api.get('/fraud/all');
       if (res.data?.success) {
         setChecks(res.data.data);
+        fraudChecksCache = res.data.data;
       }
     } catch (error) {
-      toast.error('Failed to load fraud checks');
+      if (!fraudChecksCache) toast.error('Failed to load fraud checks');
     } finally {
       setLoading(false);
     }

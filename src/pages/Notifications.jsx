@@ -6,14 +6,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
+let notificationsCache = null;
+
 export default function Notifications() {
   const [activeSection, setActiveSection] = useState('system');
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const [notifications, setNotifications] = useState(notificationsCache?.notifications || []);
+  const [loading, setLoading] = useState(!notificationsCache?.notifications);
+  const [total, setTotal] = useState(notificationsCache?.total || 0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [types, setTypes] = useState([]);
+  const [totalPages, setTotalPages] = useState(notificationsCache?.totalPages || 1);
+  const [types, setTypes] = useState(notificationsCache?.types || []);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -22,7 +24,11 @@ export default function Notifications() {
   const [sortBy, setSortBy] = useState('newest');
 
   const fetchNotifications = async () => {
-    setLoading(true);
+    const isDefaultQuery =
+      page === 1 && !search && typeFilter === 'all' && isReadFilter === 'all' && sortBy === 'newest';
+    if (!isDefaultQuery || !notificationsCache?.notifications) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/notifications/my-notifications', {
         params: {
@@ -39,6 +45,14 @@ export default function Notifications() {
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
       setTypes(data.availableTypes || []);
+      if (isDefaultQuery) {
+        notificationsCache = {
+          notifications: data.notifications || [],
+          total: data.total || 0,
+          totalPages: data.totalPages || 1,
+          types: data.availableTypes || [],
+        };
+      }
     } catch (error) {
       toast.error('Failed to load notifications');
     } finally {

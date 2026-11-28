@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Settings, Save, Globe, Mail, Shield, Server, RefreshCw, Activity, Lock, AlertTriangle, Wallet, Plus, Trash, Check, X, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ExternalLink, Eye, Palette, Sparkles, Link as LinkIcon, Zap, Store, Truck, Share2, Info, Users, HelpCircle, BookOpen, Video, Play, HardDrive } from 'lucide-react';
 import ResourceSettingsTab from '../components/ResourceSettingsTab';
 import { toast } from 'react-toastify';
@@ -50,8 +51,25 @@ const extractYouTubeId = (url) => {
   return null;
 };
 
+const VALID_GLOBAL_TABS = new Set([
+  'general',
+  'system',
+  'security',
+  'tracking',
+  'payments',
+  'themes',
+  'couriers',
+  'social',
+  'affiliate',
+  'videos',
+  'resource',
+]);
+
 export default function GlobalSettings() {
-  const [activeTab, setActiveTab] = useState('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab = VALID_GLOBAL_TABS.has(rawTab) ? rawTab : 'general';
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [affLang, setAffLang] = useState('en');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTracking, setIsLoadingTracking] = useState(false);

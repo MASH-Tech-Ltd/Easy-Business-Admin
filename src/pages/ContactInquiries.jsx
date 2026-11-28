@@ -46,26 +46,30 @@ const formatWhatsAppLink = (rawPhone, name = '') => {
   return `https://wa.me/${fullNumber}?text=${text}`;
 };
 
+let contactInquiriesCache = null;
+
 export default function ContactInquiries() {
   const { socket } = useSocket();
 
   // Data states
-  const [inquiries, setInquiries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalLeads: 0,
-    pendingLeads: 0,
-    contactedLeads: 0,
-    resolvedLeads: 0,
-    todayLeads: 0,
-    thisWeekLeads: 0,
-    thisMonthLeads: 0,
-    facebookLeads: 0,
-    googleLeads: 0,
-    directLeads: 0,
-    topicBreakdown: [],
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [inquiries, setInquiries] = useState(contactInquiriesCache?.inquiries || []);
+  const [loading, setLoading] = useState(!contactInquiriesCache?.inquiries);
+  const [stats, setStats] = useState(
+    contactInquiriesCache?.stats || {
+      totalLeads: 0,
+      pendingLeads: 0,
+      contactedLeads: 0,
+      resolvedLeads: 0,
+      todayLeads: 0,
+      thisWeekLeads: 0,
+      thisMonthLeads: 0,
+      facebookLeads: 0,
+      googleLeads: 0,
+      directLeads: 0,
+      topicBreakdown: [],
+    }
+  );
+  const [statsLoading, setStatsLoading] = useState(!contactInquiriesCache?.stats);
 
   // Pagination states
   const [page, setPage] = useState(1);
@@ -115,10 +119,11 @@ export default function ContactInquiries() {
   // Fetch Stats
   const fetchStats = useCallback(async () => {
     try {
-      setStatsLoading(true);
+      if (!contactInquiriesCache?.stats) setStatsLoading(true);
       const res = await api.get('/contact-inquiries/stats');
       if (res.data?.success && res.data?.data) {
         setStats(res.data.data);
+        contactInquiriesCache = { ...(contactInquiriesCache || {}), stats: res.data.data };
       }
     } catch (error) {
       console.error('Failed to load inquiry stats', error);
@@ -129,7 +134,11 @@ export default function ContactInquiries() {
 
   // Fetch Inquiries with Pagination and Filters
   const fetchInquiries = useCallback(async () => {
-    setLoading(true);
+    const isDefaultQuery =
+      page === 1 && !debouncedSearch && statusFilter === 'all' && sourceFilter === 'all' && topicFilter === 'all';
+    if (!isDefaultQuery || !contactInquiriesCache?.inquiries) {
+      setLoading(true);
+    }
     try {
       const params = {
         page,
@@ -142,9 +151,17 @@ export default function ContactInquiries() {
 
       const res = await api.get('/contact-inquiries/get-all-inquiries', { params });
       if (res.data?.success) {
-        setInquiries(res.data.data || []);
+        const nextInquiries = res.data.data || [];
+        setInquiries(nextInquiries);
         if (res.data.meta) {
           setMeta(res.data.meta);
+        }
+        if (isDefaultQuery) {
+          contactInquiriesCache = {
+            ...(contactInquiriesCache || {}),
+            inquiries: nextInquiries,
+            meta: res.data.meta,
+          };
         }
       }
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users,
   UserCheck,
@@ -27,32 +27,40 @@ import { toast } from 'react-toastify';
 import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 
+const VALID_AFFILIATE_TABS = new Set(['affiliates', 'withdrawals', 'commissions', 'audit']);
+let affiliatesPageCache = null;
+
 export default function Affiliates() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { socket } = useSocket();
   const [lang, setLang] = useState('en');
-  const [activeTab, setActiveTab] = useState('affiliates'); // 'affiliates' | 'withdrawals' | 'commissions' | 'audit'
+  const rawTab = searchParams.get('tab');
+  const activeTab = VALID_AFFILIATE_TABS.has(rawTab) ? rawTab : 'affiliates';
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
 
   // Overview stats
-  const [stats, setStats] = useState({
-    totalAffiliates: 0,
-    activeAffiliates: 0,
-    suspendedAffiliates: 0,
-    newAffiliatesThisMonth: 0,
-    totalReferredMerchants: 0,
-    totalCommissionGenerated: 0,
-    totalCommissionPaid: 0,
-    pendingCommission: 0,
-    pendingWithdrawalRequests: 0,
-    totalAffiliateWithdrawals: 0,
-    maxAffiliates: 500,
-    allowAffiliateRegistration: true,
-    programEnabled: true,
-  });
+  const [stats, setStats] = useState(
+    affiliatesPageCache?.stats || {
+      totalAffiliates: 0,
+      activeAffiliates: 0,
+      suspendedAffiliates: 0,
+      newAffiliatesThisMonth: 0,
+      totalReferredMerchants: 0,
+      totalCommissionGenerated: 0,
+      totalCommissionPaid: 0,
+      pendingCommission: 0,
+      pendingWithdrawalRequests: 0,
+      totalAffiliateWithdrawals: 0,
+      maxAffiliates: 500,
+      allowAffiliateRegistration: true,
+      programEnabled: true,
+    }
+  );
 
   // Tab 1: Affiliates List
-  const [affiliates, setAffiliates] = useState([]);
-  const [affMeta, setAffMeta] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [affiliates, setAffiliates] = useState(affiliatesPageCache?.affiliates || []);
+  const [affMeta, setAffMeta] = useState(affiliatesPageCache?.affMeta || { page: 1, limit: 10, total: 0, totalPages: 1 });
   const [affSearch, setAffSearch] = useState('');
   const [affStatus, setAffStatus] = useState('all');
   const [affSort, setAffSort] = useState('newest');
@@ -98,6 +106,7 @@ export default function Affiliates() {
       const res = await api.get('/affiliates/admin/overview');
       if (res.data?.data) {
         setStats(res.data.data);
+        affiliatesPageCache = { ...(affiliatesPageCache || {}), stats: res.data.data };
       }
     } catch (err) {
       console.error('Failed to load affiliate stats', err);
@@ -105,8 +114,11 @@ export default function Affiliates() {
   }, []);
 
   const fetchAffiliates = useCallback(async (page = 1) => {
+    const isDefaultQuery = page === 1 && !affSearch && affStatus === 'all' && affSort === 'newest';
     try {
-      setLoadingAffiliates(true);
+      if (!isDefaultQuery || !affiliatesPageCache?.affiliates?.length) {
+        setLoadingAffiliates(true);
+      }
       const res = await api.get('/affiliates/admin/list', {
         params: {
           page,
@@ -117,11 +129,16 @@ export default function Affiliates() {
         },
       });
       if (res.data?.data) {
-        setAffiliates(res.data.data.data || []);
-        setAffMeta(res.data.data.meta || { page: 1, limit: 10, total: 0, totalPages: 1 });
+        const nextList = res.data.data.data || [];
+        const nextMeta = res.data.data.meta || { page: 1, limit: 10, total: 0, totalPages: 1 };
+        setAffiliates(nextList);
+        setAffMeta(nextMeta);
+        if (isDefaultQuery) {
+          affiliatesPageCache = { ...(affiliatesPageCache || {}), affiliates: nextList, affMeta: nextMeta };
+        }
       }
     } catch (err) {
-      toast.error('Failed to load affiliates list');
+      if (!affiliatesPageCache?.affiliates?.length) toast.error('Failed to load affiliates list');
     } finally {
       setLoadingAffiliates(false);
     }

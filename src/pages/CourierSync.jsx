@@ -143,28 +143,40 @@ const normalise = (raw) => raw ? ({
   expiresAt:      raw.expiresAt,
 }) : null;
 
+let courierSyncCache = null;
+
 export default function CourierSync() {
   const [syncing, setSyncing]       = useState(false);
-  const [loading, setLoading]       = useState(true);   // initial DB fetch
-  const [activeTab, setActiveTab]   = useState('updated');
+  const [loading, setLoading]       = useState(!courierSyncCache?.report);   // initial DB fetch
+  const [activeTab, setActiveTab]   = useState(courierSyncCache?.activeTab || 'updated');
   const [filterType, setFilterType] = useState('ALL');
-  const [report, setReport]         = useState(null);
+  const [report, setReport]         = useState(courierSyncCache?.report || null);
   
   // History State
-  const [history, setHistory]       = useState([]);
-  const [historyMeta, setHistoryMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [history, setHistory]       = useState(courierSyncCache?.history || []);
+  const [historyMeta, setHistoryMeta] = useState(courierSyncCache?.historyMeta || { page: 1, totalPages: 1, total: 0 });
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [deleteModalId, setDeleteModalId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchHistory = useCallback(async (page = 1) => {
-    setLoadingHistory(true);
+    if (!courierSyncCache?.history?.length || page !== 1) {
+      setLoadingHistory(true);
+    }
     try {
       const res = await api.get(`/courier-sync/history?page=${page}&limit=10`);
       if (res.data?.status === 'ok') {
-        setHistory(res.data.data || []);
+        const nextHistory = res.data.data || [];
+        setHistory(nextHistory);
         if (res.data.meta) {
           setHistoryMeta(res.data.meta);
+        }
+        if (page === 1) {
+          courierSyncCache = {
+            ...(courierSyncCache || {}),
+            history: nextHistory,
+            historyMeta: res.data.meta || { page: 1, totalPages: 1, total: 0 },
+          };
         }
       }
     } catch (e) {
@@ -219,8 +231,14 @@ export default function CourierSync() {
         const res = await api.get('/courier-sync/latest');
         if (res.data?.status === 'ok' && res.data?.data) {
           const data = normalise(res.data.data);
+          const nextTab = data.updated > 0 ? 'updated' : 'skipped';
           setReport(data);
-          setActiveTab(data.updated > 0 ? 'updated' : 'skipped');
+          setActiveTab(nextTab);
+          courierSyncCache = {
+            ...(courierSyncCache || {}),
+            report: data,
+            activeTab: nextTab,
+          };
         }
       } catch (e) {
         console.warn('[CourierSync] Could not load latest report from DB:', e.message);

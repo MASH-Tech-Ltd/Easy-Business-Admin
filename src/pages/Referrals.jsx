@@ -25,22 +25,26 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+let referralsCache = null;
+
 export default function Referrals() {
   const [activeTab, setActiveTab] = useState("codes"); // "codes" | "usages" | "withdrawals"
 
   // Data states
-  const [referrals, setReferrals] = useState([]);
+  const [referrals, setReferrals] = useState(referralsCache?.referrals || []);
   const [usages, setUsages] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
-  const [stats, setStats] = useState({
-    totalCodes: 0,
-    activeCodes: 0,
-    totalUses: 0,
-    totalDaysGranted: 0,
-  });
+  const [stats, setStats] = useState(
+    referralsCache?.stats || {
+      totalCodes: 0,
+      activeCodes: 0,
+      totalUses: 0,
+      totalDaysGranted: 0,
+    }
+  );
 
   // Loading & pagination states
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!referralsCache?.referrals);
   const [actionLoading, setActionLoading] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -72,7 +76,10 @@ export default function Referrals() {
 
   // Fetch Referral Codes
   const fetchReferrals = useCallback(async () => {
-    setLoading(true);
+    const isDefaultQuery = page === 1 && !search.trim() && statusFilter === "all";
+    if (!isDefaultQuery || !referralsCache?.referrals) {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -84,10 +91,18 @@ export default function Referrals() {
       const res = await api.get(`/referrals?${params.toString()}`);
       if (res.data?.status === "ok" || res.data?.success) {
         const payload = res.data.data;
-        setReferrals(payload?.data || []);
+        const nextList = payload?.data || [];
+        setReferrals(nextList);
         setMeta(payload?.meta || { page: 1, limit, total: 0, totalPage: 1 });
         if (payload?.stats) {
           setStats(payload.stats);
+        }
+        if (isDefaultQuery) {
+          referralsCache = {
+            ...(referralsCache || {}),
+            referrals: nextList,
+            stats: payload?.stats || stats,
+          };
         }
       }
     } catch (err) {

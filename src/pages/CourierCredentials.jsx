@@ -3,21 +3,25 @@ import { Truck, Key, CheckCircle, XCircle, Search, RefreshCw, Eye, EyeOff } from
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 
+let courierCredsCache = null;
+
 export default function CourierCredentials() {
-  const [credentials, setCredentials] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [credentials, setCredentials] = useState(courierCredsCache || []);
+  const [loading, setLoading] = useState(!courierCredsCache);
   const [showTokens, setShowTokens] = useState({});
   const [syncReport, setSyncReport] = useState(null);
 
   const fetchCredentials = async () => {
-    setLoading(true);
+    if (!courierCredsCache) setLoading(true);
     try {
       const res = await api.get('/courier/all-credentials');
       if (res.data?.success) {
-        setCredentials(res.data.data.filter(c => c.provider)); // only show those that have configured credentials
+        const list = res.data.data.filter(c => c.provider);
+        setCredentials(list);
+        courierCredsCache = list;
       }
     } catch (error) {
-      toast.error('Failed to load courier credentials');
+      if (!courierCredsCache) toast.error('Failed to load courier credentials');
     } finally {
       setLoading(false);
     }

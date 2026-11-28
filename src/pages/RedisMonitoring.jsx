@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../utils/api";
 import { toast } from "react-toastify";
 import {
@@ -16,6 +17,8 @@ import {
   BarChart3,
   Layers,
   Gauge,
+  Info,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -61,19 +64,111 @@ const formatGroupLabel = (group) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
+const METRIC_INFO = {
+  version: {
+    title: "Redis Version & Uptime",
+    what: "Displays the running Redis server version, how long it has been continuously running (uptime), and the local host/port it is bound to (127.0.0.2:6379).",
+    why: "Confirms Redis is alive on localhost and hasn't unexpectedly crashed or restarted. If Redis ever goes down, the backend automatically enters Fail-Open Mode and serves requests from MongoDB.",
+  },
+  datasetMemory: {
+    title: "Dataset Memory / Max Limit",
+    what: "Shows the exact RAM used by cached keys and values inside Redis (used_memory), compared against the configured 128 MB maxmemory limit.",
+    why: "Redis is configured as cache-only with allkeys-lru. When dataset memory approaches 128 MB, Redis automatically evicts the least-recently-used keys so it never runs out of memory.",
+  },
+  processRss: {
+    title: "Process RSS Memory",
+    what: "Shows the actual OS-level RAM allocated to the redis-server process (Resident Set Size), its fragmentation ratio, and peak memory used.",
+    why: "128 MB limits the dataset, not OS allocator overhead. Monitoring RSS ensures Redis leaves plenty of headroom on your 8 GB VPS. A fragmentation ratio between 1.0 and 1.5 is healthy (or slightly higher when dataset is tiny, e.g. 1 MB).",
+  },
+  keysClients: {
+    title: "Keys & Connected Clients",
+    what: "Shows the live count of cached keys currently stored in Redis (DBSIZE), active client connections from the backend, and real-time commands/sec (Ops/s).",
+    why: "After clicking 'Clear All Cache', this key count drops immediately and then repopulates as live storefront and dashboard requests arrive.",
+  },
+  memoryBudget: {
+    title: "Memory Budget Utilization",
+    what: "Visualizes what percentage of the 128 MB Redis dataset budget is currently occupied, along with the active eviction policy (allkeys-lru) and total commands processed.",
+    why: "Helps you spot if the cache is near capacity (>85%) before considering tuning TTLs or increasing maxmemory.",
+  },
+  liveHitRate: {
+    title: "Live App Cache Hit Rate",
+    what: "Percentage of application cache lookups served directly from Redis (Hits) vs falling back to MongoDB (Misses) since the Node.js server started.",
+    why: "Formula: Hits / (Hits + Misses) × 100. Higher hit rate means fewer MongoDB queries and faster API responses. Note: these counters track traffic since server start and do not reset when you clear keys.",
+  },
+  keyspaceHitRate: {
+    title: "Redis Keyspace Hit Rate",
+    what: "Redis-native keyspace hit rate plus total evicted keys (removed due to 128 MB cap) and expired keys (removed automatically when TTL finishes).",
+    why: "Includes all Redis lookups (cache keys + rate limiter keys). If Evicted Keys grows rapidly, your 128 MB budget is filling up faster than TTLs expire.",
+  },
+  monitoredEndpoints: {
+    title: "Monitored API Endpoints",
+    what: "Total distinct API routes tracked by the backend performance middleware and how many have P95 latency at or above the slow threshold (300ms).",
+    why: "Lets you identify which endpoints are slow and verify how much faster cache-hit requests are compared to cache-miss requests.",
+  },
+  hitsMisses: {
+    title: "Hits / Misses & GETs / SETs",
+    what: "Total application-level cache Hits, Misses, GET lookups, and SET writes recorded since the backend started.",
+    why: "Shows total cache activity. Clearing the cache removes stored keys in Redis, while these lifetime counters continue tracking hit/miss volume.",
+  },
+  evictedExpired: {
+    title: "Evicted / Expired Keys",
+    what: "Evicted = keys dropped early by allkeys-lru because 128 MB was full. Expired = keys that naturally reached their TTL (e.g. 60s–900s).",
+    why: "Healthy cache has many Expired keys and 0 (or very few) Evicted keys.",
+  },
+  invalidationsErrors: {
+    title: "Invalidations / Errors",
+    what: "Invalidations = total cache clears/version bumps triggered by product, category, order, theme, or admin Clear actions. Errors = failed/corrupt Redis reads.",
+    why: "Confirms stale data is being actively invalidated on updates, and Errors = 0 confirms healthy Redis communication.",
+  },
+  groupChart: {
+    title: "Hits vs Misses by Cache Group",
+    what: "Compares cache hits and misses across each functional module (Storefront, Category, Product, Admin/Merchant/Affiliate Dashboards, Auth/Tenant).",
+    why: "Helps you see which modules benefit most from Redis caching and where miss rates are high.",
+  },
+  apiPerf: {
+    title: "Endpoint Latency & Cache-Hit Comparison",
+    what: "Tracks request count, Average latency, P95 latency (95% of requests are faster than this), and side-by-side Hit vs Miss response times.",
+    why: "Proves real-world speedup from Redis (e.g. Hit ~2ms vs Miss ~120ms) without creating extra Redis keys per request.",
+  },
+};
+
+const VALID_REDIS_TABS = new Set(["overview", "performance", "analytics", "api", "management"]);
+
+let redisMonitorCache = null;
+
 export default function RedisMonitoring() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const activeTab = VALID_REDIS_TABS.has(rawTab) ? rawTab : "overview";
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(15000);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!redisMonitorCache);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [overview, setOverview] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [apiPerf, setApiPerf] = useState(null);
-  const [tenants, setTenants] = useState([]);
+  const [overview, setOverview] = useState(redisMonitorCache?.overview || null);
+  const [analytics, setAnalytics] = useState(redisMonitorCache?.analytics || null);
+  const [apiPerf, setApiPerf] = useState(redisMonitorCache?.apiPerf || null);
+  const [tenants, setTenants] = useState(redisMonitorCache?.tenants || []);
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [confirmModal, setConfirmModal] = useState(null);
+  const [infoModal, setInfoModal] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const InfoButton = ({ infoKey }) => {
+    const item = METRIC_INFO[infoKey];
+    if (!item) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setInfoModal(item)}
+        title={`About ${item.title}`}
+        aria-label={`Info about ${item.title}`}
+        className="p-1 rounded-full text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+    );
+  };
 
   const isVisibleRef = useRef(true);
 
@@ -85,9 +180,18 @@ export default function RedisMonitoring() {
         api.get("/system/redis/cache-analytics"),
         api.get("/system/redis/api-performance"),
       ]);
-      setOverview(ovRes.data?.data || null);
-      setAnalytics(anRes.data?.data || null);
-      setApiPerf(perfRes.data?.data || null);
+      const nextOverview = ovRes.data?.data || null;
+      const nextAnalytics = anRes.data?.data || null;
+      const nextApiPerf = perfRes.data?.data || null;
+      setOverview(nextOverview);
+      setAnalytics(nextAnalytics);
+      setApiPerf(nextApiPerf);
+      redisMonitorCache = {
+        ...(redisMonitorCache || {}),
+        overview: nextOverview,
+        analytics: nextAnalytics,
+        apiPerf: nextApiPerf,
+      };
     } catch (err) {
       if (isManual) {
         toast.error(err?.response?.data?.message || "Failed to fetch Redis monitoring data");
@@ -104,7 +208,10 @@ export default function RedisMonitoring() {
       .get("/tenants/get-all-tenants?limit=100")
       .then((res) => {
         const list = res.data?.data?.tenants || res.data?.data || [];
-        if (Array.isArray(list)) setTenants(list);
+        if (Array.isArray(list)) {
+          setTenants(list);
+          redisMonitorCache = { ...(redisMonitorCache || {}), tenants: list };
+        }
       })
       .catch(() => {});
   }, [fetchAllData]);
@@ -250,7 +357,7 @@ export default function RedisMonitoring() {
           <div className="text-sm text-amber-900">
             <p className="font-semibold">Redis is currently disconnected — Fail-Open Mode Active</p>
             <p className="text-amber-700 mt-0.5">
-              All storefront, merchant, and admin requests are being served directly from MongoDB without interruption.
+              All storefront, merchant, and admin requests are being served directly from Database without interruption.
               {redis?.lastError ? ` Last error: ${redis.lastError}` : ""}
             </p>
           </div>
@@ -293,7 +400,10 @@ export default function RedisMonitoring() {
             <div className="bg-white p-5 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
                 <span>REDIS VERSION &amp; UPTIME</span>
-                <Server className="w-4 h-4 text-blue-500" />
+                <div className="flex items-center gap-1">
+                  <Server className="w-4 h-4 text-blue-500" />
+                  <InfoButton infoKey="version" />
+                </div>
               </div>
               <div className="mt-2 text-2xl font-bold text-slate-900">
                 {redis?.version ? `v${redis.version}` : "Offline"}
@@ -306,7 +416,10 @@ export default function RedisMonitoring() {
             <div className="bg-white p-5 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
                 <span>DATASET MEMORY / MAX</span>
-                <HardDrive className="w-4 h-4 text-emerald-500" />
+                <div className="flex items-center gap-1">
+                  <HardDrive className="w-4 h-4 text-emerald-500" />
+                  <InfoButton infoKey="datasetMemory" />
+                </div>
               </div>
               <div className="mt-2 text-2xl font-bold text-slate-900">
                 {redis?.memory?.usedMemoryHuman || "0 B"}
@@ -319,7 +432,10 @@ export default function RedisMonitoring() {
             <div className="bg-white p-5 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
                 <span>PROCESS RSS MEMORY</span>
-                <Database className="w-4 h-4 text-purple-500" />
+                <div className="flex items-center gap-1">
+                  <Database className="w-4 h-4 text-purple-500" />
+                  <InfoButton infoKey="processRss" />
+                </div>
               </div>
               <div className="mt-2 text-2xl font-bold text-slate-900">
                 {redis?.memory?.usedMemoryRssHuman || "0 B"}
@@ -333,7 +449,10 @@ export default function RedisMonitoring() {
             <div className="bg-white p-5 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
                 <span>KEYS &amp; CLIENTS</span>
-                <Activity className="w-4 h-4 text-amber-500" />
+                <div className="flex items-center gap-1">
+                  <Activity className="w-4 h-4 text-amber-500" />
+                  <InfoButton infoKey="keysClients" />
+                </div>
               </div>
               <div className="mt-2 text-2xl font-bold text-slate-900">
                 {(redis?.totalKeys ?? 0).toLocaleString()} keys
@@ -348,7 +467,10 @@ export default function RedisMonitoring() {
           <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-slate-900">Memory Budget Utilization</h3>
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-1.5">
+                  Memory Budget Utilization
+                  <InfoButton infoKey="memoryBudget" />
+                </h3>
                 <p className="text-xs text-slate-500">
                   Eviction Policy: <span className="font-mono font-medium">{redis?.memory?.evictionPolicy || "allkeys-lru"}</span> &bull; Total Commands:{" "}
                   {(redis?.totalCommandsProcessed ?? 0).toLocaleString()}
@@ -367,7 +489,10 @@ export default function RedisMonitoring() {
           {/* Quick Live Cache Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">LIVE CACHE HIT RATE</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">LIVE CACHE HIT RATE</p>
+                <InfoButton infoKey="liveHitRate" />
+              </div>
               <p className="text-2xl font-bold text-emerald-600 mt-1.5">
                 {totals.hitRatePercent ?? 0}%
               </p>
@@ -376,7 +501,10 @@ export default function RedisMonitoring() {
               </p>
             </div>
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">REDIS KEYSPACE HIT RATE</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">REDIS KEYSPACE HIT RATE</p>
+                <InfoButton infoKey="keyspaceHitRate" />
+              </div>
               <p className="text-2xl font-bold text-blue-600 mt-1.5">
                 {redis?.stats?.hitRatePercent ?? 0}%
               </p>
@@ -385,7 +513,10 @@ export default function RedisMonitoring() {
               </p>
             </div>
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">MONITORED API ENDPOINTS</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">MONITORED API ENDPOINTS</p>
+                <InfoButton infoKey="monitoredEndpoints" />
+              </div>
               <p className="text-2xl font-bold text-slate-900 mt-1.5">
                 {endpoints.length}
               </p>
@@ -402,7 +533,10 @@ export default function RedisMonitoring() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">APP CACHE HIT RATE</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">APP CACHE HIT RATE</p>
+                <InfoButton infoKey="liveHitRate" />
+              </div>
               <p className="text-2xl font-bold text-emerald-600 mt-2">
                 {totals.hitRatePercent ?? 0}%
               </p>
@@ -411,7 +545,10 @@ export default function RedisMonitoring() {
               </p>
             </div>
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">HITS / MISSES</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">HITS / MISSES</p>
+                <InfoButton infoKey="hitsMisses" />
+              </div>
               <p className="text-2xl font-bold text-slate-900 mt-2">
                 {(totals.hits ?? 0).toLocaleString()} / {(totals.misses ?? 0).toLocaleString()}
               </p>
@@ -420,7 +557,10 @@ export default function RedisMonitoring() {
               </p>
             </div>
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">EVICTED / EXPIRED KEYS</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">EVICTED / EXPIRED KEYS</p>
+                <InfoButton infoKey="evictedExpired" />
+              </div>
               <p className="text-2xl font-bold text-slate-900 mt-2">
                 {(redis?.stats?.evictedKeys ?? 0).toLocaleString()} /{" "}
                 {(redis?.stats?.expiredKeys ?? 0).toLocaleString()}
@@ -430,7 +570,10 @@ export default function RedisMonitoring() {
               </p>
             </div>
             <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <p className="text-xs font-medium text-slate-500">INVALIDATIONS / ERRORS</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500">INVALIDATIONS / ERRORS</p>
+                <InfoButton infoKey="invalidationsErrors" />
+              </div>
               <p className="text-2xl font-bold text-slate-900 mt-2">
                 {(totals.invalidations ?? 0).toLocaleString()} /{" "}
                 <span className={totals.errors > 0 ? "text-red-600" : ""}>{totals.errors ?? 0}</span>
@@ -442,7 +585,10 @@ export default function RedisMonitoring() {
           <div className="bg-white p-6 rounded-xl border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-900">Hits vs Misses by Cache Group</h3>
+                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-1.5">
+                  Hits vs Misses by Cache Group
+                  <InfoButton infoKey="groupChart" />
+                </h3>
                 <p className="text-xs text-slate-500">
                   Both high-volume and low-volume cache groups remain visible with subtle hover highlight
                 </p>
@@ -707,6 +853,56 @@ export default function RedisMonitoring() {
               <Trash2 className="w-4 h-4" />
               Clear All Cache
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Metric Info Modal */}
+      {infoModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setInfoModal(null)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-blue-600 shrink-0" />
+                <h3 className="text-base font-bold text-slate-900">{infoModal.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInfoModal(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-slate-600">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                  What it shows
+                </p>
+                <p>{infoModal.what}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                  Why it matters &amp; how it works
+                </p>
+                <p>{infoModal.why}</p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setInfoModal(null)}
+                className="px-4 py-1.5 text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}

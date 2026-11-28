@@ -38,9 +38,11 @@ const CATEGORIES = [
   "Case Study",
 ];
 
+let blogsCache = null;
+
 export default function Blogs() {
-  const [blogs, setBlogs] = useState([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [blogs, setBlogs] = useState(blogsCache?.blogs || []);
+  const [meta, setMeta] = useState(blogsCache?.meta || { page: 1, limit: 10, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -104,7 +106,11 @@ export default function Blogs() {
   };
 
   const fetchBlogs = useCallback(async (page = meta.page) => {
-    setLoading(true);
+    const isDefaultQuery =
+      page === 1 && !searchTerm.trim() && selectedCategory === "All" && selectedStatus === "all";
+    if (!isDefaultQuery || !blogsCache?.blogs?.length) {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -117,9 +123,16 @@ export default function Blogs() {
 
       const res = await api.get(`/blogs/get-all-blogs?${params.toString()}`);
       if (res.data?.success || res.data?.data) {
-        setBlogs(res.data.data || []);
+        const nextBlogs = res.data.data || [];
+        setBlogs(nextBlogs);
         if (res.data.meta) {
           setMeta(res.data.meta);
+        }
+        if (page === 1 && !searchTerm.trim() && selectedCategory === "All" && selectedStatus === "all") {
+          blogsCache = {
+            blogs: nextBlogs,
+            meta: res.data.meta || { page: 1, limit: 10, total: nextBlogs.length, totalPages: 1 },
+          };
         }
       }
     } catch (err) {
